@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import Login from './components/Login';
-import Register from './components/Register';
-import HomePage from './components/HomePage';
+import React, { useState } from "react";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import HomePage from "./components/HomePage";
 
 function App() {
   //state to keep track of the user that is logged in

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 function HomePage({ user, setUser }) {
   //function to handle user logout
