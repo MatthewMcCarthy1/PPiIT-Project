@@ -12,7 +12,7 @@ function Login({ setUser }) {
     setError('');
     try {
       // Send a POST request to the server for login
-      const response = await fetch('http://localhost:3000/server.php', {
+      const response = await fetch('http://localhost:8000/server.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

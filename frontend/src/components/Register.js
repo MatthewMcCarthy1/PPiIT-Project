@@ -1,26 +1,45 @@
 import React, { useState } from "react";
 
 function Register({ setUser }) {
-  // State for form inputs
+  // State for form inputs and error message
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState('');
 
   // Function to handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     // Check if the email ends with @atu.ie
     if (!email.endsWith("@atu.ie")) {
-      alert("Only @atu.ie email addresses are allowed to register.");
+      setError("Only @atu.ie email addresses are allowed to register.");
       return;
     }
-    // TODO: Implement registration logic with backend API
-    console.log("Registration attempt:", email, password);
-    setUser({ email }); // Temporary: set user on submit, will be removed
+    try {
+      // Send a POST request to the server for registration
+      const response = await fetch('http://localhost:8000/server.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'register', email, password }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert(data.message);
+        setUser({ email });
+      } else {
+        setError(data.message);
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.');
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Register</h2>
+      {error && <p style={{color: 'red'}}>{error}</p>}
       {/* Email input field */}
       <input
         type="email"
