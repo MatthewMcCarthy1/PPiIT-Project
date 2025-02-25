@@ -21,6 +21,11 @@ function App() {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  // Function to handle user logout
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
 
   return (
     <div className="App">
@@ -33,7 +38,7 @@ function App() {
         </>
       ) : (
         // Show HomePage if a user is logged in
-        <HomePage user={user} setUser={setUser} />
+        <HomePage user={user} setUser={handleLogout} />
       )}
     </div>
   );
