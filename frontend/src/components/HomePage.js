@@ -1,9 +1,9 @@
 import React from "react";
 
 function HomePage({ user, setUser }) {
-  //function to handle user logout
+  // Function to handle user logout
   const handleLogout = () => {
-    setUser(null); //clear the user state to log out
+    setUser(null); // Clear the user state to log out
   };
 
   return (

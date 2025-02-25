@@ -4,20 +4,20 @@ import Register from "./components/Register";
 import HomePage from "./components/HomePage";
 
 function App() {
-  //state to keep track of the user that is logged in
+  // State to keep track of the user that is logged in
   const [user, setUser] = useState(null);
 
   return (
     <div className="App">
-      {/*conditional rendering based on user authentication state */}
+      {/* Conditional rendering based on user authentication state */}
       {!user ? (
         <>
-          {/*show Login and Register components if no user is logged in */}
+          {/* Show Login and Register components if no user is logged in */}
           <Login setUser={setUser} />
           <Register setUser={setUser} />
         </>
       ) : (
-        //show HomePage if a user is logged in
+        // Show HomePage if a user is logged in
         <HomePage user={user} setUser={setUser} />
       )}
     </div>
