@@ -4,6 +4,7 @@ function HomePage({ user, setUser }) {
   // Function to handle user logout
   const handleLogout = () => {
     setUser(null); // Clear the user state to log out
+    localStorage.removeItem('user');
   };
 
   return (
