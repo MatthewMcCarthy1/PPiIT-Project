@@ -23,10 +23,10 @@ function Login({ setUser }) {
       if (data.success) {
         setUser(data.user);
       } else {
-        setError(data.message);
+        setError(data.message || 'An error occurred during login');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Network error. Please try again.');
     } 
   };
 

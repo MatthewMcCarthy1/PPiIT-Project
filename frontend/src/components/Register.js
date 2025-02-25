@@ -15,6 +15,10 @@ function Register({ setUser }) {
       setError("Only @atu.ie email addresses are allowed to register.");
       return;
     }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
     try {
       // Send a POST request to the server for registration
       const response = await fetch('http://localhost:8000/server.php', {
@@ -29,10 +33,10 @@ function Register({ setUser }) {
         alert(data.message);
         setUser({ email });
       } else {
-        setError(data.message);
+        setError(data.message || 'An error occurred during registration');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Network error. Please try again.');
     }
   };
 

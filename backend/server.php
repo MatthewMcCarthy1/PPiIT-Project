@@ -24,7 +24,7 @@ $data = json_decode(file_get_contents("php://input"));
 
 // Check if an action is specified in the request
 if (isset($data->action)) {
-    switch($data->action) {
+    switch ($data->action) {
         case 'login':
             login($conn, $data);
             break;
@@ -39,9 +39,16 @@ if (isset($data->action)) {
 }
 
 // Function to handle user login
-function login($conn, $data) {
+function login($conn, $data)
+{
     $email = $data->email;
     $password = $data->password;
+
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(["success" => false, "message" => "Invalid email format"]);
+        return;
+    }
 
     // Prepare and execute a SQL query to find the user
     $stmt = $conn->prepare("SELECT id, email, password FROM users WHERE email = ?");
@@ -63,7 +70,8 @@ function login($conn, $data) {
 }
 
 // Function to handle user registration
-function register($conn, $data) {
+function register($conn, $data)
+{
     $email = $data->email;
     $password = $data->password;
 
@@ -76,6 +84,12 @@ function register($conn, $data) {
     // Check if the email ends with @atu.ie
     if (!preg_match('/@atu\.ie$/', $email)) {
         echo json_encode(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
+        return;
+    }
+
+    // Check if password is minimum 8 characters long
+    if (strlen($password) < 8) {
+        echo json_encode(["success" => false, "message" => "Password must be at least 8 characters long"]);
         return;
     }
 
