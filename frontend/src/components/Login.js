@@ -1,21 +1,39 @@
 import React, { useState } from "react";
 
 function Login({ setUser }) {
-  // State for form inputs
+  // State for form inputs and error message
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState('');
 
   // Function to handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    //TODO: Implement login logic with backend API
-    console.log("Login attempt:", email, password);
-    setUser({ email }); // Temporary: set user on submit, will be removed 
+    setError('');
+    try {
+      // Send a POST request to the server for login
+      const response = await fetch('http://localhost:3000/server.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'login', email, password }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUser(data.user);
+      } else {
+        setError(data.message);
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.');
+    } 
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Login</h2>
+      {error && <p style={{color: 'red'}}>{error}</p>}
       {/* Email input field */}
       <input
         type="email"
