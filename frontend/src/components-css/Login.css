@@ -1,0 +1,22 @@
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .password-container input {
+    flex: 1;
+  }
+  
+  .password-container i {
+    position: absolute;
+    right: 10px;
+    top: 40%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    transition: color 0.3s ease-in-out;
+  }
+  
+  .password-container i:hover {
+    color: #007bff;
+  }
