@@ -14,14 +14,16 @@ function Register({ setUser }) {
     e.preventDefault();
     setError('');
     setIsLoading(true); // Set loading to true when registration starts
-    
+
     // Check if the email ends with @atu.ie
     if (!email.endsWith("@atu.ie")) {
       setError("Only @atu.ie email addresses are allowed to register.");
+      setIsLoading(false); // Stop loading if validation fails
       return;
     }
     if (password.length < 8) {
       setError('Password must be at least 8 characters long.');
+      setIsLoading(false); // Stop loading if validation fails
       return;
     }
     try {
