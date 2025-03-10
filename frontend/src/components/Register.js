@@ -7,7 +7,8 @@ function Register({ setUser }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
+  
   // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
