@@ -8,11 +8,13 @@ function Register({ setUser }) {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true); // Set loading to true when registration starts
+    
     // Check if the email ends with @atu.ie
     if (!email.endsWith("@atu.ie")) {
       setError("Only @atu.ie email addresses are allowed to register.");
