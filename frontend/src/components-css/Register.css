@@ -20,3 +20,11 @@
   .password-container i:hover {
     color: #007bff;
   }
+
+  .loading-spinner {
+    text-align: center;
+    font-size: 16px;
+    color: #11811b;
+    margin-top: 10px;
+  }
+  
