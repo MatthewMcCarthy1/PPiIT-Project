@@ -43,6 +43,8 @@ function Register({ setUser }) {
       }
     } catch (error) {
       setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false); // Stop loading after registration completes
     }
   };
 
