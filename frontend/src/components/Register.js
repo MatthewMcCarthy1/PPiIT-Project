@@ -27,12 +27,17 @@ function Register({ setUser }) {
       return;
     }
     try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+
       // Send a POST request to the server for registration
-      const response = await fetch("http://localhost:8000/server.php", {
+      const response = await fetch(backendUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include',
         body: JSON.stringify({ action: "register", email, password }),
       });
       const data = await response.json();
