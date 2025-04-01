@@ -1,10 +1,6 @@
 <?php
-
-header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -12,11 +8,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Connect to the MySQL database
-$conn = new mysqli("localhost", "root", "", "ppiitprojectdb");
+$conn = new mysqli("mysql", "root", "root", "ppiitprojectdb");
 
 // Check connection
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    error_log("Connection failed: " . $conn->connect_error);
+    die(json_encode(["success" => false, "message" => "Database connection failed"]));
 }
 
 // Decode the JSON data sent from the client
