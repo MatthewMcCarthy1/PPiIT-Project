@@ -42,8 +42,9 @@ CREATE TABLE IF NOT EXISTS `users` (
 --
 
 INSERT INTO `users` (`id`, `email`, `password`, `created_at`) VALUES
-(1, 'Test@atu.ie', '$2y$12$77hZjjReSkX9O/WsAoO8ZeOFl0zoqXkgxUvJuomsvtkAKhw7TWKj2', '2025-02-25 18:06:12'),
-(2, 'Test2@atu.ie', '$2y$12$.GlpFe9sRgbm8Ehj875xG.EHhhVsvt7W37jo9XO0M/ZuyVjbTexl2', '2025-02-25 20:24:48');
+(1, 'test@atu.ie', '$2y$12$YYYn5CwkwcU1t1yxJPNyEODw9Qd.CHHtKV1QOPi92KMCB2hT50MCy', CURRENT_TIMESTAMP), -- Password: testpass123
+(2, 'admin@atu.ie', '$2y$12$YmJUigR1FUOXvMX.5yD/y.WBKzGBYbJ.ETdYw0KjIhjD48bTmqmfK', CURRENT_TIMESTAMP); -- Password: adminpass123
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

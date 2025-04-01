@@ -1,0 +1,10 @@
+{
+  "name": "PPiIT Project",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "php",
+  "workspaceFolder": "/var/www/html",
+  "mounts": [
+    "source=ppiit-mysql-data,target=/var/lib/mysql,type=volume"
+  ],
+  "forwardPorts": [3000, 8000, 8080]
+}
