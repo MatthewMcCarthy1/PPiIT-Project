@@ -16,12 +16,24 @@ body {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin: 12px 15px;
   border-radius: 8px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .website-name {
   font-size: 24px;
   font-weight: bold;
   flex: 0 0 20%;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.website-name:hover {
+  transform: scale(1.05);
 }
 
 .search-bar-container {
@@ -29,15 +41,24 @@ body {
   left: 50%;
   top: 60%;
   transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
 }
 
 .search-bar {
   width: 300px;
-  padding: 10px;
+  padding: 10px 40px 10px 15px;
   border: none;
   border-radius: 5px;
   font-size: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease, width 0.3s ease;
+}
+
+.search-bar:focus {
+  outline: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  width: 320px;
 }
 
 .banner-buttons {
@@ -58,6 +79,10 @@ body {
   font-size: 14px;
   font-weight: bold;
   transition: background-color 0.3s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 .ask-question-button:hover,
@@ -66,10 +91,28 @@ body {
   transform: scale(1.05);
 }
 
+.ask-question-button {
+  animation: slideInRight 0.5s ease-in-out;
+}
+
+.logout-button {
+  animation: slideInRight 0.5s ease-in-out 0.1s;
+  animation-fill-mode: both;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 .welcome-message {
   margin-right: 15px;
   font-size: 16px;
   font-weight: bold;
   color: white;
   align-self: center;
+}
+
+.welcome-message i {
+  margin-right: 5px;
 }
