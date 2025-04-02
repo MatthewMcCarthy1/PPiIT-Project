@@ -1,46 +1,56 @@
-version: '3.8'
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ppiitprojectdb
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./backend/ppiitprojectdb.sql:/docker-entrypoint-initdb.d/init.sql
-    command: >
-      --default-authentication-plugin=mysql_native_password
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+# This file defines a multi-container setup with MySQL, PHP/Apache, and phpMyAdmin
 
-  php:
-    image: php:8.1-apache
-    volumes:
-      - ./backend:/var/www/html
-      - ./apache.conf:/etc/apache2/conf-available/cors.conf
+# Specifies the Docker Compose file format version
+version: '3.8'
+
+# Defines the services/containers that make up the application
+services:
+  # MySQL database service
+  mysql:
+    image: mysql:8.0  # Uses MySQL 8.0 official image
+    environment:
+      # Database credentials and configuration
+      MYSQL_ROOT_PASSWORD: root  # Sets the root password 
+      MYSQL_DATABASE: ppiitprojectdb  # Creates this database on startup
     ports:
-      - "8000:80"
+      - "3306:3306"  # Maps host port 3306 to container port 3306 for database connections
+    volumes:
+      - ./backend/ppiitprojectdb.sql:/docker-entrypoint-initdb.d/init.sql  # Mounts SQL init script to auto-initialize the database
+    command: >
+      --default-authentication-plugin=mysql_native_password  # Sets MySQL to use native password auth for compatibility
+    healthcheck:
+      # Checks if MySQL is running and responding
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s  # Runs the check every 5 seconds
+      timeout: 5s   # Considers the check failed after 5 seconds
+      retries: 5    # Retries 5 times before marking the service as unhealthy
+
+  # PHP with Apache web server service
+  php:
+    image: php:8.1-apache  # Uses PHP 8.1 with Apache official image
+    volumes:
+      - ./backend:/var/www/html  # Mounts local backend directory to the Apache document root
+      - ./apache.conf:/etc/apache2/conf-available/cors.conf  # Mounts custom Apache config for CORS
+    ports:
+      - "8000:80"  # Maps host port 8000 to container port 80 (HTTP)
     command: >
       bash -c "a2enmod headers &&
               a2enconf cors &&
               docker-php-ext-install mysqli &&
-              apache2-foreground"
+              apache2-foreground"  # Enables Apache headers module, CORS config, installs mysqli extension, and starts Apache
     environment:
-      APACHE_DOCUMENT_ROOT: /var/www/html
+      APACHE_DOCUMENT_ROOT: /var/www/html  # Sets Apache document root directory
     depends_on:
-      - mysql
+      - mysql  # Ensures MySQL container starts before this service
 
+  # phpMyAdmin service for database management through a web interface
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin/phpmyadmin  # Uses official phpMyAdmin image
     environment:
-      PMA_HOST: mysql
-      PMA_USER: root
-      PMA_PASSWORD: root
+      PMA_HOST: mysql  # Connects to the MySQL service
+      PMA_USER: root   # Default login username
+      PMA_PASSWORD: root  # Default login password
     ports:
-      - "8080:80"
+      - "8080:80"  # Maps host port 8080 to container port 80 for web access
     depends_on:
-      - mysql
+      - mysql  # Ensures MySQL container starts before this service
