@@ -1,35 +1,50 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+}
+
 .banner {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background-color: #ff4b2b;
-  padding: 10px 20px;
+  padding: 15px 30px;
   color: white;
   font-family: Arial, sans-serif;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 12px 15px;
+  border-radius: 8px;
 }
 
 .website-name {
   font-size: 24px;
   font-weight: bold;
+  flex: 0 0 20%;
 }
 
 .search-bar-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
 }
 
 .search-bar {
-  width: 50%;
-  padding: 8px;
+  width: 300px;
+  padding: 10px;
   border: none;
   border-radius: 5px;
   font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .banner-buttons {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 15px;
+  flex: 0 0 auto;
 }
 
 .ask-question-button,
@@ -37,21 +52,22 @@
   background-color: white;
   color: #ff4b2b;
   border: none;
-  padding: 8px 15px;
+  padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 .ask-question-button:hover,
 .logout-button:hover {
   background-color: #ffe5e0;
+  transform: scale(1.05);
 }
 
 .welcome-message {
-  margin-right: 10px;
+  margin-right: 15px;
   font-size: 16px;
   font-weight: bold;
   color: white;

@@ -27,8 +27,6 @@ function HomePage({ user, setUser }) {
           </button>
         </div>
       </div>
-      <div className="content">
-      </div>
     </div>
   );
 }
