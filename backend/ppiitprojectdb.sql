@@ -45,6 +45,24 @@ INSERT INTO `users` (`id`, `email`, `password`, `created_at`) VALUES
 (1, 'test@atu.ie', '$2y$12$YYYn5CwkwcU1t1yxJPNyEODw9Qd.CHHtKV1QOPi92KMCB2hT50MCy', CURRENT_TIMESTAMP), -- Password: testpass123
 (2, 'admin@atu.ie', '$2y$12$YmJUigR1FUOXvMX.5yD/y.WBKzGBYbJ.ETdYw0KjIhjD48bTmqmfK', CURRENT_TIMESTAMP); -- Password: adminpass123
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `questions`
+--
+
+DROP TABLE IF EXISTS `questions`;
+CREATE TABLE IF NOT EXISTS `questions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `body` text NOT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
