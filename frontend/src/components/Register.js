@@ -42,7 +42,8 @@ function Register({ setUser }) {
       });
       const data = await response.json();
       if (data.success) {
-        setUser({ email });
+        // Update to store both email and id
+        setUser(data.user);
       } else {
         setError(data.message || "An error occurred during registration");
       }
