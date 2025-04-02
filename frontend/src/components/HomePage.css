@@ -1,0 +1,51 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ff4b2b;
+  padding: 10px 20px;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.website-name {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.search-bar-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.search-bar {
+  width: 50%;
+  padding: 8px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.banner-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.ask-question-button,
+.logout-button {
+  background-color: white;
+  color: #ff4b2b;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.ask-question-button:hover,
+.logout-button:hover {
+  background-color: #ffe5e0;
+}
