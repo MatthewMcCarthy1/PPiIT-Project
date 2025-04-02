@@ -20,6 +20,7 @@ function HomePage({ user, setUser }) {
           />
         </div>
         <div className="banner-buttons">
+          <span className="welcome-message">Welcome, {user.email}!</span>
           <button className="ask-question-button">Ask Question</button>
           <button className="logout-button" onClick={handleLogout}>
             Logout
@@ -27,7 +28,6 @@ function HomePage({ user, setUser }) {
         </div>
       </div>
       <div className="content">
-        <h1>Welcome, {user.email}!</h1>
       </div>
     </div>
   );
