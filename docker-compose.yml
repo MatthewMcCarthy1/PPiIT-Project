@@ -9,12 +9,8 @@ services:
       - "3306:3306"
     volumes:
       - ./backend/ppiitprojectdb.sql:/docker-entrypoint-initdb.d/init.sql
-      - ppiit-mysql-data:/var/lib/mysql
     command: >
       --default-authentication-plugin=mysql_native_password
-      --skip-mysqlx
-      --innodb-flush-method=O_DSYNC
-      --innodb-use-native-aio=0
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
@@ -48,7 +44,3 @@ services:
       - "8080:80"
     depends_on:
       - mysql
-
-volumes:
-  ppiit-mysql-data:
-    name: ppiit-mysql-data
