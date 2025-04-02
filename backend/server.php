@@ -4,35 +4,59 @@ ini_set('display_errors', 1);
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type");
+    header("Access-Control-Allow-Credentials: true");
     exit(0);
 }
 
-// Connect to the MySQL database
-$conn = new mysqli("mysql", "root", "root", "ppiitprojectdb");
+// Add CORS headers to all responses
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Credentials: true");
+header("Content-Type: application/json");
 
-// Check connection
-if ($conn->connect_error) {
-    error_log("Connection failed: " . $conn->connect_error);
-    die(json_encode(["success" => false, "message" => "Database connection failed"]));
-}
+try {
+    // Connect to the MySQL database
+    $conn = new mysqli("mysql", "root", "root", "ppiitprojectdb");
 
-// Decode the JSON data sent from the client
-$data = json_decode(file_get_contents("php://input"));
-
-// Check if an action is specified in the request
-if (isset($data->action)) {
-    switch ($data->action) {
-        case 'login':
-            login($conn, $data);
-            break;
-        case 'register':
-            register($conn, $data);
-            break;
-        default:
-            echo json_encode(["success" => false, "message" => "Invalid action"]);
+    // Check connection
+    if ($conn->connect_error) {
+        die(json_encode(["success" => false, "message" => "Database connection failed"]));
     }
-} else {
-    echo json_encode(["success" => false, "message" => "No action specified"]);
+
+    // Decode the JSON data sent from the client
+    $data = json_decode(file_get_contents("php://input"));
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        die(json_encode(["success" => false, "message" => "Invalid request format"]));
+    }
+
+    // Check if an action is specified in the request
+    if (isset($data->action)) {
+        switch ($data->action) {
+            case 'login':
+                login($conn, $data);
+                break;
+            case 'register':
+                register($conn, $data);
+                break;
+            case 'submitQuestion':
+                submitQuestion($conn, $data);
+                break;
+            default:
+                echo json_encode(["success" => false, "message" => "Invalid action"]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "No action specified"]);
+    }
+
+    // Close the database connection
+    $conn->close();
+} catch (Exception $e) {
+    echo json_encode(["success" => false, "message" => "Server error"]);
 }
 
 // Function to handle user login
@@ -98,13 +122,62 @@ function register($conn, $data)
     $stmt->bind_param("ss", $email, $hashed_password);
 
     if ($stmt->execute()) {
-        echo json_encode(["success" => true, "message" => "User registered successfully"]);
+        $user_id = $conn->insert_id; // Get the ID of the newly created user
+        echo json_encode([
+            "success" => true, 
+            "message" => "User registered successfully",
+            "user" => ["id" => $user_id, "email" => $email]
+        ]);
     } else {
         echo json_encode(["success" => false, "message" => "Error registering user"]);
     }
 }
 
-// Close the database connection
-$conn->close();
+// Function to handle question submission
+function submitQuestion($conn, $data)
+{
+    // Check if user is authenticated
+    if (!isset($data->userId) || empty($data->userId)) {
+        echo json_encode(["success" => false, "message" => "User authentication required"]);
+        return;
+    }
 
+    // Validate question data
+    if (empty($data->title) || empty($data->body)) {
+        echo json_encode(["success" => false, "message" => "Title and body are required"]);
+        return;
+    }
+
+    try {
+        // Prepare and execute SQL query to insert the question
+        $stmt = $conn->prepare("INSERT INTO questions (user_id, title, body, tags) VALUES (?, ?, ?, ?)");
+        if (!$stmt) {
+            echo json_encode(["success" => false, "message" => "Database error"]);
+            return;
+        }
+        
+        $stmt->bind_param("isss", $data->userId, $data->title, $data->body, $data->tags);
+        
+        if ($stmt->execute()) {
+            $questionId = $stmt->insert_id;
+            echo json_encode([
+                "success" => true, 
+                "message" => "Question submitted successfully",
+                "questionId" => $questionId
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Error submitting question"
+            ]);
+        }
+        
+        $stmt->close();
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing question"
+        ]);
+    }
+}
 ?>
