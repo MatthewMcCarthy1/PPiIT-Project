@@ -5,6 +5,8 @@ import "./HomePage.css";
 function HomePage({ user, setUser }) {
   // State to control question modal visibility
   const [showQuestionModal, setShowQuestionModal] = useState(false);
+  // State to track submission status
+  const [submissionStatus, setSubmissionStatus] = useState(null);
 
   // Function to handle user logout
   const handleLogout = () => {
@@ -21,13 +23,55 @@ function HomePage({ user, setUser }) {
   // Toggle question modal
   const toggleQuestionModal = () => {
     setShowQuestionModal(!showQuestionModal);
+    // Clear any previous submission status when opening/closing modal
+    if (!showQuestionModal) {
+      setSubmissionStatus(null);
+    }
   };
 
   // Handle question submission from modal
-  const handleQuestionSubmit = (questionData) => {
-    // Placeholder for question submission logic
-    console.log("Question submitted:", questionData);
-    toggleQuestionModal();
+  const handleQuestionSubmit = async (questionData) => {
+    try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'submitQuestion', 
+          userId: user.id, 
+          ...questionData 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Question submitted successfully!'
+        });
+        // Close modal after 2 seconds on success
+        setTimeout(() => {
+          toggleQuestionModal();
+        }, 2000);
+      } else {
+        setSubmissionStatus({
+          type: 'error',
+          message: data.message || 'Failed to submit question'
+        });
+      }
+    } catch (error) {
+      setSubmissionStatus({
+        type: 'error',
+        message: 'Network error. Please try again.'
+      });
+    }
   };
 
   return (
@@ -58,7 +102,8 @@ function HomePage({ user, setUser }) {
       <QuestionModal 
         isOpen={showQuestionModal} 
         onClose={toggleQuestionModal} 
-        onSubmit={handleQuestionSubmit} 
+        onSubmit={handleQuestionSubmit}
+        submissionStatus={submissionStatus}
       />
     </div>
   );
