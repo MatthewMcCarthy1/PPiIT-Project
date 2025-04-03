@@ -27,6 +27,14 @@ try {
         die(json_encode(["success" => false, "message" => "Database connection failed"]));
     }
 
+    // Handle GET requests separately
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        if (isset($_GET['action']) && $_GET['action'] === 'getQuestions') {
+            getQuestions($conn);
+            exit;
+        }
+    }
+
     // Decode the JSON data sent from the client
     $data = json_decode(file_get_contents("php://input"));
 
@@ -57,6 +65,41 @@ try {
     $conn->close();
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => "Server error"]);
+}
+
+// Function to get all questions
+function getQuestions($conn) {
+    // Prepare SQL query to get questions with user email
+    $sql = "SELECT q.*, u.email as user_email 
+            FROM questions q 
+            JOIN users u ON q.user_id = u.id 
+            ORDER BY q.created_at DESC";
+    
+    $result = $conn->query($sql);
+    
+    if ($result === false) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error retrieving questions: " . $conn->error
+        ]);
+        return;
+    }
+    
+    $questions = [];
+    $count = 0;
+    
+    // Collect all questions from the result set
+    while ($row = $result->fetch_assoc()) {
+        $questions[] = $row;
+        $count++;
+    }
+    
+    // Include count for debugging
+    echo json_encode([
+        "success" => true,
+        "count" => $count,
+        "questions" => $questions
+    ]);
 }
 
 // Function to handle user login
