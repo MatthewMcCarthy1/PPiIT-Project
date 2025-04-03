@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import QuestionModal from "./QuestionModal";
+import Questions from "./Questions";
 import "./HomePage.css";
 
 function HomePage({ user, setUser }) {
@@ -7,6 +8,48 @@ function HomePage({ user, setUser }) {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   // State to track submission status
   const [submissionStatus, setSubmissionStatus] = useState(null);
+  // State for questions data
+  const [questions, setQuestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Function to fetch questions from the backend
+  const fetchQuestions = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(`${backendUrl}?action=getQuestions`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Log to check how many questions are returned
+        console.log(`Fetched ${data.questions.length} questions:`, data.questions);
+        
+        // Make sure we're setting the state with the full array of questions
+        setQuestions(data.questions || []);
+      } else {
+        setError(data.message || 'Failed to load questions');
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setError('Network error. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch questions when component mounts
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
 
   // Function to handle user logout
   const handleLogout = () => {
@@ -59,6 +102,8 @@ function HomePage({ user, setUser }) {
         // Close modal after 2 seconds on success
         setTimeout(() => {
           toggleQuestionModal();
+          // Refresh the questions list
+          fetchQuestions();
         }, 2000);
       } else {
         setSubmissionStatus({
@@ -97,6 +142,13 @@ function HomePage({ user, setUser }) {
           </button>
         </div>
       </div>
+
+      {/* Questions Component */}
+      <Questions 
+        questions={questions} 
+        isLoading={isLoading} 
+        error={error} 
+      />
 
       {/* Question Modal Component */}
       <QuestionModal 
