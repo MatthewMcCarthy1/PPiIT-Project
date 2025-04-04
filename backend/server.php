@@ -67,16 +67,17 @@ try {
     echo json_encode(["success" => false, "message" => "Server error"]);
 }
 
-// Function to get all questions
+// Function to get all questions from the database
 function getQuestions($conn) {
-    // Prepare SQL query to get questions with user email
+    // Prepare SQL query to join questions with user data to get author email
     $sql = "SELECT q.*, u.email as user_email 
             FROM questions q 
             JOIN users u ON q.user_id = u.id 
-            ORDER BY q.created_at DESC";
+            ORDER BY q.created_at DESC"; // Sort by newest first
     
     $result = $conn->query($sql);
     
+    // Handle query execution errors
     if ($result === false) {
         echo json_encode([
             "success" => false, 
@@ -94,10 +95,10 @@ function getQuestions($conn) {
         $count++;
     }
     
-    // Include count for debugging
+    // Return JSON response with success status and questions array
     echo json_encode([
         "success" => true,
-        "count" => $count,
+        "count" => $count, // Include count for debugging
         "questions" => $questions
     ]);
 }
@@ -176,33 +177,35 @@ function register($conn, $data)
     }
 }
 
-// Function to handle question submission
+// Function to handle question submission from users
 function submitQuestion($conn, $data)
 {
-    // Check if user is authenticated
+    // Verify user authentication before allowing question submission
     if (!isset($data->userId) || empty($data->userId)) {
         echo json_encode(["success" => false, "message" => "User authentication required"]);
         return;
     }
 
-    // Validate question data
+    // Validate required question fields
     if (empty($data->title) || empty($data->body)) {
         echo json_encode(["success" => false, "message" => "Title and body are required"]);
         return;
     }
 
     try {
-        // Prepare and execute SQL query to insert the question
+        // Prepare SQL statement to insert the new question
         $stmt = $conn->prepare("INSERT INTO questions (user_id, title, body, tags) VALUES (?, ?, ?, ?)");
         if (!$stmt) {
             echo json_encode(["success" => false, "message" => "Database error"]);
             return;
         }
         
+        // Bind parameters to prevent SQL injection
         $stmt->bind_param("isss", $data->userId, $data->title, $data->body, $data->tags);
         
+        // Execute the statement and handle result
         if ($stmt->execute()) {
-            $questionId = $stmt->insert_id;
+            $questionId = $stmt->insert_id; // Get ID of newly created question
             echo json_encode([
                 "success" => true, 
                 "message" => "Question submitted successfully",
@@ -217,6 +220,7 @@ function submitQuestion($conn, $data)
         
         $stmt->close();
     } catch (Exception $e) {
+        // Handle any unexpected errors during processing
         echo json_encode([
             "success" => false, 
             "message" => "Error processing question"
