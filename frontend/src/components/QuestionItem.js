@@ -1,8 +1,22 @@
 import React from "react";
 import "./QuestionItem.css";
 
+/**
+ * QuestionItem Component
+ * 
+ * Displays an individual question with its title, body excerpt, tags, 
+ * author information, and creation date.
+ * 
+ * @param {Object} question - Question object containing all question details
+ * @returns {JSX.Element} - Rendered component
+ */
 function QuestionItem({ question }) {
-  // Format the date to a more readable format
+  /**
+   * Formats a date string into a more readable format
+   * 
+   * @param {string} dateString - ISO date string from database
+   * @returns {string} - Formatted date string
+   */
   const formatDate = (dateString) => {
     const options = { 
       year: 'numeric', 
@@ -14,7 +28,12 @@ function QuestionItem({ question }) {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // Format tags into array 
+  /**
+   * Converts comma-separated tags string into an array of individual tags
+   * 
+   * @param {string} tags - Comma-separated tag string
+   * @returns {Array} - Array of individual tag strings
+   */
   const formatTags = (tags) => {
     if (!tags) return [];
     return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
@@ -22,17 +41,21 @@ function QuestionItem({ question }) {
 
   return (
     <div className="question-item">
+      {/* Question title */}
       <div className="question-header">
         <h3 className="question-title">{question.title}</h3>
       </div>
       
+      {/* Question body preview - truncated to 200 characters if longer */}
       <div className="question-excerpt">
         {question.body.length > 200 
           ? `${question.body.substring(0, 200)}...` 
           : question.body}
       </div>
       
+      {/* Question metadata: tags, author, and date */}
       <div className="question-meta">
+        {/* Tags section */}
         <div className="question-tags-container">
           <span className="tags-label">Tags:</span>
           <div className="question-tags">
@@ -46,6 +69,7 @@ function QuestionItem({ question }) {
           </div>
         </div>
         
+        {/* Author and date information */}
         <div className="question-info">
           <span className="question-author">
             <i className="fas fa-user"></i> {question.user_email}
