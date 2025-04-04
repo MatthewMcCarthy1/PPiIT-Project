@@ -2,8 +2,19 @@ import React from "react";
 import QuestionItem from "./QuestionItem";
 import "./Questions.css";
 
+/**
+ * Questions Component
+ * 
+ * Responsible for displaying a list of questions fetched from the backend.
+ * Handles three states: loading, error, and displaying questions.
+ * 
+ * @param {Array} questions - Array of question objects to display
+ * @param {boolean} isLoading - Flag indicating if questions are currently being fetched
+ * @param {string} error - Error message if question fetching failed
+ * @returns {JSX.Element} - Rendered component
+ */
 function Questions({ questions, isLoading, error }) {
-  // Show loading indicator
+  // Show loading indicator when questions are being fetched
   if (isLoading) {
     return (
       <div className="questions-container">
@@ -14,7 +25,7 @@ function Questions({ questions, isLoading, error }) {
     );
   }
 
-  // Show error message
+  // Show error message if questions fetching failed
   if (error) {
     return (
       <div className="questions-container">
@@ -25,7 +36,7 @@ function Questions({ questions, isLoading, error }) {
     );
   }
 
-  // Show message when no questions are available
+  // Show message when no questions are available in the database
   if (!questions || questions.length === 0) {
     return (
       <div className="questions-container">
@@ -38,17 +49,17 @@ function Questions({ questions, isLoading, error }) {
     );
   }
 
-  // Render list of questions
+  // Render list of questions when available
   return (
     <div className="questions-container">
       <h2 className="questions-header">
         <i className="fas fa-list-alt"></i> Questions ({questions.length})
       </h2>
       <div className="questions-list">
-        {/* Added debugging to verify all questions are in the array */}
+        {/* Log the number of questions being rendered for debugging */}
         {console.log('Rendering', questions.length, 'questions')}
         
-        {/* Map through the full array to render each question */}
+        {/* Map through the questions array to create a QuestionItem component for each */}
         {questions.map((question) => (
           <QuestionItem key={question.id} question={question} />
         ))}
