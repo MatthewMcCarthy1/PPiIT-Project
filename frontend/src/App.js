@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import HomePage from "./components/HomePage";
+import Login from "./components/auth/login/Login";
+import Register from "./components/auth/login/register/Register";
+import HomePage from "./components/home/HomePage";
 import './App.css'
 
 function App() {

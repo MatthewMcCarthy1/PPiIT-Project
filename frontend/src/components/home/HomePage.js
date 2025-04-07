@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import QuestionModal from "./QuestionModal";
-import Questions from "./Questions";
+import QuestionModal from "../questions/QuestionModal";
+import Questions from "../questions/Questions";
 import "./HomePage.css";
 
 function HomePage({ user, setUser }) {
