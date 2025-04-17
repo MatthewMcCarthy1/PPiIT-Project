@@ -19,7 +19,8 @@ function Questions({ questions, isLoading, error }) {
     return (
       <div className="questions-container">
         <div className="questions-loading">
-          <i className="fas fa-spinner fa-spin"></i> Loading questions...
+          <div className="spinner"></div>
+          <span>Loading questions...</span>
         </div>
       </div>
     );
@@ -30,7 +31,11 @@ function Questions({ questions, isLoading, error }) {
     return (
       <div className="questions-container">
         <div className="questions-error">
-          <i className="fas fa-exclamation-circle"></i> {error}
+          <i className="fas fa-exclamation-circle"></i> 
+          <div>
+            <h3>Error</h3>
+            <p>{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -44,6 +49,7 @@ function Questions({ questions, isLoading, error }) {
           <i className="fas fa-question-circle"></i>
           <h3>No questions yet</h3>
           <p>Be the first to ask a question using the "Ask Question" button!</p>
+          <div className="empty-state-illustration"></div>
         </div>
       </div>
     );
@@ -53,13 +59,10 @@ function Questions({ questions, isLoading, error }) {
   return (
     <div className="questions-container">
       <h2 className="questions-header">
-        <i className="fas fa-list-alt"></i> Questions ({questions.length})
+        <i className="fas fa-list-alt"></i> Recent Questions 
+        <span className="questions-count">{questions.length}</span>
       </h2>
       <div className="questions-list">
-        {/* Log the number of questions being rendered for debugging */}
-        {console.log('Rendering', questions.length, 'questions')}
-        
-        {/* Map through the questions array to create a QuestionItem component for each */}
         {questions.map((question) => (
           <QuestionItem key={question.id} question={question} />
         ))}
