@@ -58,9 +58,24 @@ CREATE TABLE IF NOT EXISTS `questions` (
   `title` varchar(150) NOT NULL,
   `body` text NOT NULL,
   `tags` varchar(255) DEFAULT NULL,
+  `views` int DEFAULT 0,
+  `answer_count` int DEFAULT 0,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Create a table for bookmarks 
+DROP TABLE IF EXISTS `bookmarks`;
+CREATE TABLE IF NOT EXISTS `bookmarks` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `question_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_question` (`user_id`, `question_id`),
+  KEY `user_id` (`user_id`),
+  KEY `question_id` (`question_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 COMMIT;
