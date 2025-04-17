@@ -12,6 +12,13 @@ function HomePage({ user, setUser }) {
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
+  const [activeView, setActiveView] = useState("home"); // 'home', 'myquestions', 'bookmarks'
+  const [popularTags, setPopularTags] = useState([]);
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [sortOption, setSortOption] = useState("newest");
 
   // Function to fetch questions from the backend
   const fetchQuestions = async () => {
@@ -35,6 +42,24 @@ function HomePage({ user, setUser }) {
         
         // Make sure we're setting the state with the full array of questions
         setQuestions(data.questions || []);
+        
+        // Extract and count tags to find popular ones
+        const tags = {};
+        (data.questions || []).forEach(question => {
+          if (question.tags) {
+            question.tags.split(',').forEach(tag => {
+              const trimmedTag = tag.trim();
+              if (trimmedTag) {
+                tags[trimmedTag] = (tags[trimmedTag] || 0) + 1;
+              }
+            });
+          }
+        });
+        
+        // Convert to array and sort by frequency
+        const tagArray = Object.entries(tags).map(([tag, count]) => ({ tag, count }));
+        tagArray.sort((a, b) => b.count - a.count);
+        setPopularTags(tagArray.slice(0, 5));
       } else {
         setError(data.message || 'Failed to load questions');
       }
@@ -50,6 +75,54 @@ function HomePage({ user, setUser }) {
   useEffect(() => {
     fetchQuestions();
   }, []);
+
+  // Effect to filter and sort questions based on search, tags, and view
+  useEffect(() => {
+    let result = [...questions];
+    
+    // Filter by search query
+    if (searchInput.trim()) {
+      const query = searchInput.toLowerCase();
+      result = result.filter(question => 
+        question.title.toLowerCase().includes(query) ||
+        question.body.toLowerCase().includes(query) ||
+        (question.tags && question.tags.toLowerCase().includes(query))
+      );
+    }
+    
+    // Filter by selected tag
+    if (selectedTag) {
+      result = result.filter(question => 
+        question.tags && question.tags.toLowerCase().includes(selectedTag.toLowerCase())
+      );
+    }
+    
+    // Filter by active view
+    if (activeView === "myquestions") {
+      result = result.filter(question => parseInt(question.user_id) === parseInt(user.id));
+    } else if (activeView === "bookmarks") {
+      // Get bookmarks from localStorage
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+      
+      // Only show questions that are actually in the bookmarks array
+      if (bookmarks.length === 0) {
+        result = []; // Empty array if no bookmarks instead of showing all questions
+      } else {
+        result = result.filter(question => bookmarks.includes(parseInt(question.id)));
+      }
+    }
+    
+    // Sort questions
+    if (sortOption === "oldest") {
+      result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    } else if (sortOption === "newest") {
+      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (sortOption === "popular") {
+      // To be implemented
+    }
+    
+    setFilteredQuestions(result);
+  }, [questions, searchInput, selectedTag, activeView, sortOption, user.id]);
 
   // Function to handle user logout
   const handleLogout = () => {
@@ -119,11 +192,45 @@ function HomePage({ user, setUser }) {
     }
   };
 
-  // Add a new function to handle search
-  const handleSearch = (event) => {
-    if (event.key === 'Enter') {
-      // Future implementation for search functionality
-      console.log("Searching for:", event.target.value);
+  // Search handler
+  const handleSearchInput = (e) => {
+    setSearchInput(e.target.value);
+  };
+
+  // Handle pressing Enter to set the official search query (for displaying "Searching for: X")
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      setSearchQuery(e.target.value);
+    }
+  };
+
+  // Tag selection handler
+  const handleTagSelect = (tag) => {
+    if (selectedTag === tag) {
+      setSelectedTag(null); // Deselect if already selected
+    } else {
+      setSelectedTag(tag);
+    }
+  };
+
+  // View selection handler
+  const handleViewSelect = (view) => {
+    setActiveView(view);
+  };
+
+  // Sort option handler
+  const handleSortChange = (e) => {
+    setSortOption(e.target.value);
+  };
+
+  // Reset all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSearchInput("");
+    setSelectedTag(null);
+    const searchBar = document.querySelector(".search-bar");
+    if (searchBar) {
+      searchBar.value = "";
     }
   };
 
@@ -136,7 +243,8 @@ function HomePage({ user, setUser }) {
             type="text"
             className="search-bar"
             placeholder="Search for questions..."
-            onKeyDown={handleSearch}
+            onChange={handleSearchInput}
+            onKeyDown={handleSearchKeyPress}
           />
           <i className="fas fa-search search-icon"></i>
         </div>
@@ -164,43 +272,85 @@ function HomePage({ user, setUser }) {
             <div className="sidebar-section">
               <h3><i className="fas fa-star"></i> Navigation</h3>
               <ul className="sidebar-menu">
-                <li className="active"><i className="fas fa-home"></i> Home</li>
-                <li><i className="fas fa-question"></i> My Questions</li>
-                <li><i className="fas fa-bookmark"></i> Bookmarks</li>
+                <li 
+                  className={activeView === "home" ? "active" : ""}
+                  onClick={() => handleViewSelect("home")}
+                >
+                  <i className="fas fa-home"></i> Home
+                </li>
+                <li 
+                  className={activeView === "myquestions" ? "active" : ""}
+                  onClick={() => handleViewSelect("myquestions")}
+                >
+                  <i className="fas fa-question"></i> My Questions
+                </li>
+                <li 
+                  className={activeView === "bookmarks" ? "active" : ""}
+                  onClick={() => handleViewSelect("bookmarks")}
+                >
+                  <i className="fas fa-bookmark"></i> Bookmarks
+                </li>
               </ul>
             </div>
             
             <div className="sidebar-section">
               <h3><i className="fas fa-tags"></i> Popular Tags</h3>
               <div className="tag-cloud">
-                <span className="popular-tag">Java</span>
-                <span className="popular-tag">Python</span>
-                <span className="popular-tag">JavaScript</span>
-                <span className="popular-tag">C#</span>
-                <span className="popular-tag">Database</span>
+                {popularTags.length > 0 ? (
+                  popularTags.map((tagItem, index) => (
+                    <span 
+                      key={index} 
+                      className={`popular-tag ${selectedTag === tagItem.tag ? 'selected' : ''}`}
+                      onClick={() => handleTagSelect(tagItem.tag)}
+                    >
+                      {tagItem.tag} <small>({tagItem.count})</small>
+                    </span>
+                  ))
+                ) : (
+                  <span className="no-tags">No tags yet</span>
+                )}
               </div>
+              {(searchQuery || selectedTag) && (
+                <button className="clear-filters" onClick={clearFilters}>
+                  <i className="fas fa-times"></i> Clear Filters
+                </button>
+              )}
             </div>
           </div>
           
           <div className="questions-section">
             <div className="questions-actions">
               <div className="questions-filter">
-                <select className="filter-dropdown">
-                  <option>Newest First</option>
-                  <option>Oldest First</option>
-                  <option>Most Popular</option>
+                <select 
+                  className="filter-dropdown" 
+                  value={sortOption}
+                  onChange={handleSortChange}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="popular">Most Popular</option>
                 </select>
+                
+                {searchQuery && (
+                  <div className="search-results-info">
+                    Showing results for: <strong>"{searchQuery}"</strong>
+                  </div>
+                )}
               </div>
               <button className="refresh-button" onClick={fetchQuestions}>
                 <i className="fas fa-sync-alt"></i> Refresh
               </button>
             </div>
             
-            {/* Questions Component */}
+            {/* Pass filtered questions and additional props */}
             <Questions 
-              questions={questions} 
+              questions={filteredQuestions} 
+              allQuestionsCount={questions.length}
               isLoading={isLoading} 
-              error={error} 
+              error={error}
+              searchQuery={searchQuery}
+              searchInput={searchInput}
+              activeView={activeView}
             />
           </div>
         </div>
