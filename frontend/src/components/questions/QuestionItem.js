@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "./questions-css/QuestionItem.css";
 
 /**
@@ -11,6 +11,14 @@ import "./questions-css/QuestionItem.css";
  * @returns {JSX.Element} - Rendered component
  */
 function QuestionItem({ question }) {
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  
+  // Check if the question is bookmarked
+  useEffect(() => {
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+    setIsBookmarked(bookmarks.includes(parseInt(question.id)));
+  }, [question.id]);
+
   /**
    * Formats a date string into a more readable format
    * 
@@ -78,11 +86,49 @@ function QuestionItem({ question }) {
     return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
   };
 
+  // Toggle bookmark
+  const toggleBookmark = (e) => {
+    e.stopPropagation(); // Prevent event bubbling
+    
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+    const questionId = parseInt(question.id);
+    let newBookmarks;
+    
+    if (isBookmarked) {
+      // Remove from bookmarks
+      newBookmarks = bookmarks.filter(id => id !== questionId);
+    } else {
+      // Add to bookmarks
+      newBookmarks = [...bookmarks, questionId];
+    }
+    
+    localStorage.setItem('bookmarks', JSON.stringify(newBookmarks));
+    setIsBookmarked(!isBookmarked);
+  };
+
+  // Handle click on question item
+  const handleQuestionClick = () => {
+    // In future, navigate to question detail page
+    console.log(`Viewing question: ${question.title}`);
+    
+    // For now, just show an alert
+    alert(`This would open the full question: "${question.title}"`);
+    
+    // In future, increment view count here by calling an API
+  };
+
   return (
-    <div className="question-item">
-      {/* Question title */}
+    <div className="question-item" onClick={handleQuestionClick}>
+      {/* Question title with bookmark icon */}
       <div className="question-header">
         <h3 className="question-title">{question.title}</h3>
+        <button 
+          className={`bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`}
+          onClick={toggleBookmark}
+          title={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
+        >
+          <i className={`${isBookmarked ? 'fas' : 'far'} fa-bookmark`}></i>
+        </button>
       </div>
       
       {/* Question body preview - truncated to 200 characters if longer */}
@@ -101,6 +147,10 @@ function QuestionItem({ question }) {
         <div className="stat-item">
           <i className="far fa-eye"></i>
           <span>0 views</span>
+        </div>
+        <div className="stat-item view-question">
+          <i className="fas fa-external-link-alt"></i>
+          <span>View Full Question</span>
         </div>
       </div>
       
