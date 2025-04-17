@@ -67,15 +67,83 @@ try {
     echo json_encode(["success" => false, "message" => "Server error"]);
 }
 
-// Function to get all questions from the database
+// Function to get all questions from the database with optional filtering
 function getQuestions($conn) {
-    // Prepare SQL query to join questions with user data to get author email
+    // Check for filtering parameters
+    $userId = isset($_GET['userId']) ? $_GET['userId'] : null;
+    $tag = isset($_GET['tag']) ? $_GET['tag'] : null;
+    $search = isset($_GET['search']) ? $_GET['search'] : null;
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
+    
+    // Build the SQL query with JOIN
     $sql = "SELECT q.*, u.email as user_email 
             FROM questions q 
-            JOIN users u ON q.user_id = u.id 
-            ORDER BY q.created_at DESC"; // Sort by newest first
+            JOIN users u ON q.user_id = u.id ";
     
-    $result = $conn->query($sql);
+    // Add WHERE conditions if filtering
+    $conditions = [];
+    $params = [];
+    $types = "";
+    
+    if ($userId) {
+        $conditions[] = "q.user_id = ?";
+        $params[] = $userId;
+        $types .= "i"; // Integer
+    }
+    
+    if ($tag) {
+        $conditions[] = "q.tags LIKE ?";
+        $params[] = "%$tag%";
+        $types .= "s"; // String
+    }
+    
+    if ($search) {
+        $conditions[] = "(q.title LIKE ? OR q.body LIKE ? OR q.tags LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $types .= "sss"; // Three strings
+    }
+    
+    // Combine conditions if any
+    if (!empty($conditions)) {
+        $sql .= "WHERE " . implode(" AND ", $conditions) . " ";
+    }
+    
+    // Add ORDER BY based on sort parameter
+    if ($sort === 'oldest') {
+        $sql .= "ORDER BY q.created_at ASC";
+    } else {
+        // Default to newest
+        $sql .= "ORDER BY q.created_at DESC";
+    }
+    
+    // Use prepared statements if we have parameters
+    if (!empty($params)) {
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Error preparing query: " . $conn->error
+            ]);
+            return;
+        }
+        
+        // Bind parameters dynamically
+        if (!empty($types) && !empty($params)) {
+            $bindParams = [$types];
+            for ($i = 0; $i < count($params); $i++) {
+                $bindParams[] = &$params[$i];
+            }
+            call_user_func_array([$stmt, 'bind_param'], $bindParams);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        // Direct query if no parameters
+        $result = $conn->query($sql);
+    }
     
     // Handle query execution errors
     if ($result === false) {
@@ -98,7 +166,7 @@ function getQuestions($conn) {
     // Return JSON response with success status and questions array
     echo json_encode([
         "success" => true,
-        "count" => $count, // Include count for debugging
+        "count" => $count,
         "questions" => $questions
     ]);
 }
