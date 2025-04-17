@@ -27,8 +27,38 @@
 
 .question-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.bookmark-btn {
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 5px;
+  transition: all 0.2s ease;
+}
+
+.bookmark-btn:hover {
+  color: #ff4b2b;
+  transform: scale(1.1);
+}
+
+.bookmark-btn.bookmarked {
+  color: #ff4b2b;
+}
+
+.view-question {
+  margin-left: auto;
+  color: #ff4b2b;
+  cursor: pointer;
+}
+
+.view-question:hover {
+  text-decoration: underline;
 }
 
 .question-title {
