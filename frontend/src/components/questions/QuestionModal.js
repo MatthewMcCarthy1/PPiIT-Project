@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./QuestionModal.css";
+import "./questions-css/QuestionModal.css";
 
 /**
  * QuestionModal Component

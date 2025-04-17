@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../components-css/Register.css";
+import "../register/Register.css";
 
 function Register({ setUser }) {
   // State for form inputs and error message

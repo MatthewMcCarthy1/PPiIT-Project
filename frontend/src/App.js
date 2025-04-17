@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Login from "./components/auth/login/Login";
-import Register from "./components/auth/login/register/Register";
+import Register from "./components/auth/register/Register";
 import HomePage from "./components/home/HomePage";
 import './App.css'
 

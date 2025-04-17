@@ -1,6 +1,6 @@
 import React from "react";
 import QuestionItem from "./QuestionItem";
-import "./Questions.css";
+import "./questions-css/Questions.css";
 
 /**
  * Questions Component

@@ -1,5 +1,5 @@
 import React from "react";
-import "./QuestionItem.css";
+import "./questions-css/QuestionItem.css";
 
 /**
  * QuestionItem Component
