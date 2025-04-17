@@ -52,6 +52,7 @@ body {
   align-items: center;
   max-width: 400px;
   width: 100%;
+  padding-top: 10px;
 }
 
 .search-bar {
@@ -72,7 +73,8 @@ body {
 
 .search-icon {
   position: absolute;
-  right: 15px;
+  padding-bottom: 13px;
+  right: 10px;
   color: #888;
   pointer-events: none;
 }
