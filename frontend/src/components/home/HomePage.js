@@ -119,8 +119,16 @@ function HomePage({ user, setUser }) {
     }
   };
 
+  // Add a new function to handle search
+  const handleSearch = (event) => {
+    if (event.key === 'Enter') {
+      // Future implementation for search functionality
+      console.log("Searching for:", event.target.value);
+    }
+  };
+
   return (
-    <div>
+    <div className="home-page">
       <div className="banner">
         <div className="website-name" onClick={goToHome}>UniStack</div>
         <div className="search-bar-container">
@@ -128,7 +136,9 @@ function HomePage({ user, setUser }) {
             type="text"
             className="search-bar"
             placeholder="Search for questions..."
+            onKeyDown={handleSearch}
           />
+          <i className="fas fa-search search-icon"></i>
         </div>
         <div className="banner-buttons">
           <span className="welcome-message">
@@ -143,12 +153,58 @@ function HomePage({ user, setUser }) {
         </div>
       </div>
 
-      {/* Questions Component */}
-      <Questions 
-        questions={questions} 
-        isLoading={isLoading} 
-        error={error} 
-      />
+      <div className="content-container">
+        <div className="welcome-banner">
+          <h1>Welcome to UniStack</h1>
+          <p>A community-driven Q&A platform for ATU students to ask questions, share knowledge, and learn together.</p>
+        </div>
+        
+        <div className="main-content">
+          <div className="sidebar">
+            <div className="sidebar-section">
+              <h3><i className="fas fa-star"></i> Navigation</h3>
+              <ul className="sidebar-menu">
+                <li className="active"><i className="fas fa-home"></i> Home</li>
+                <li><i className="fas fa-question"></i> My Questions</li>
+                <li><i className="fas fa-bookmark"></i> Bookmarks</li>
+              </ul>
+            </div>
+            
+            <div className="sidebar-section">
+              <h3><i className="fas fa-tags"></i> Popular Tags</h3>
+              <div className="tag-cloud">
+                <span className="popular-tag">Java</span>
+                <span className="popular-tag">Python</span>
+                <span className="popular-tag">JavaScript</span>
+                <span className="popular-tag">C#</span>
+                <span className="popular-tag">Database</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="questions-section">
+            <div className="questions-actions">
+              <div className="questions-filter">
+                <select className="filter-dropdown">
+                  <option>Newest First</option>
+                  <option>Oldest First</option>
+                  <option>Most Popular</option>
+                </select>
+              </div>
+              <button className="refresh-button" onClick={fetchQuestions}>
+                <i className="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            
+            {/* Questions Component */}
+            <Questions 
+              questions={questions} 
+              isLoading={isLoading} 
+              error={error} 
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Question Modal Component */}
       <QuestionModal 
