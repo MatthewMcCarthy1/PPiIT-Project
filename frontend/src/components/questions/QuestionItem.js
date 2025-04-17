@@ -29,6 +29,45 @@ function QuestionItem({ question }) {
   };
 
   /**
+   * Calculates time elapsed since question was posted
+   * 
+   * @param {string} dateString - ISO date string from database
+   * @returns {string} - Human readable time elapsed
+   */
+  const getTimeElapsed = (dateString) => {
+    const now = new Date();
+    const postedDate = new Date(dateString);
+    const seconds = Math.floor((now - postedDate) / 1000);
+    
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) {
+      return interval === 1 ? "1 year ago" : `${interval} years ago`;
+    }
+    
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) {
+      return interval === 1 ? "1 month ago" : `${interval} months ago`;
+    }
+    
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) {
+      return interval === 1 ? "1 day ago" : `${interval} days ago`;
+    }
+    
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) {
+      return interval === 1 ? "1 hour ago" : `${interval} hours ago`;
+    }
+    
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) {
+      return interval === 1 ? "1 minute ago" : `${interval} minutes ago`;
+    }
+    
+    return "just now";
+  };
+
+  /**
    * Converts comma-separated tags string into an array of individual tags
    * 
    * @param {string} tags - Comma-separated tag string
@@ -53,11 +92,22 @@ function QuestionItem({ question }) {
           : question.body}
       </div>
       
+      {/* Question stats section */}
+      <div className="question-stats">
+        <div className="stat-item">
+          <i className="far fa-comment-alt"></i>
+          <span>0 answers</span>
+        </div>
+        <div className="stat-item">
+          <i className="far fa-eye"></i>
+          <span>0 views</span>
+        </div>
+      </div>
+      
       {/* Question metadata: tags, author, and date */}
       <div className="question-meta">
         {/* Tags section */}
         <div className="question-tags-container">
-          <span className="tags-label">Tags:</span>
           <div className="question-tags">
             {formatTags(question.tags).length > 0 ? (
               formatTags(question.tags).map((tag, index) => (
@@ -71,12 +121,15 @@ function QuestionItem({ question }) {
         
         {/* Author and date information */}
         <div className="question-info">
-          <span className="question-author">
-            <i className="fas fa-user"></i> {question.user_email}
-          </span>
-          <span className="question-date">
-            <i className="far fa-clock"></i> {formatDate(question.created_at)}
-          </span>
+          <div className="user-avatar">
+            {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
+          </div>
+          <div className="user-details">
+            <span className="question-author">{question.user_email}</span>
+            <span className="question-date" title={formatDate(question.created_at)}>
+              {getTimeElapsed(question.created_at)}
+            </span>
+          </div>
         </div>
       </div>
     </div>
