@@ -17,6 +17,7 @@ import "./questions-css/Questions.css";
  * @param {string} activeView - Current active view
  * @param {object} currentUser - Current logged-in user
  * @param {function} onQuestionDeleted - Handler for question deletion
+ * @param {function} onQuestionView - Handler for question view
  * @returns {JSX.Element} - Rendered component
  */
 function Questions({ 
@@ -28,7 +29,8 @@ function Questions({
   searchInput, 
   activeView, 
   currentUser,
-  onQuestionDeleted 
+  onQuestionDeleted,
+  onQuestionView
 }) {
   // Show loading indicator when questions are being fetched
   if (isLoading) {
@@ -127,6 +129,7 @@ function Questions({
             question={question} 
             currentUser={currentUser}
             onQuestionDeleted={onQuestionDeleted}
+            onQuestionView={onQuestionView}
           />
         ))}
       </div>
