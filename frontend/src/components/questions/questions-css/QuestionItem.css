@@ -32,14 +32,25 @@
   margin-bottom: 12px;
 }
 
-.bookmark-btn {
+.question-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.bookmark-btn, .delete-btn {
   background: transparent;
   border: none;
+  padding: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bookmark-btn {
   color: #999;
   font-size: 18px;
-  cursor: pointer;
-  padding: 5px;
-  transition: all 0.2s ease;
 }
 
 .bookmark-btn:hover {
@@ -49,6 +60,16 @@
 
 .bookmark-btn.bookmarked {
   color: #ff4b2b;
+}
+
+.delete-btn {
+  color: #999;
+  font-size: 16px;
+}
+
+.delete-btn:hover {
+  color: #ff4b2b;
+  transform: scale(1.1);
 }
 
 .view-question {
