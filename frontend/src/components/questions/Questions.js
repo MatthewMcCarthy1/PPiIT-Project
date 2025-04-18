@@ -15,9 +15,21 @@ import "./questions-css/Questions.css";
  * @param {string} searchQuery - Search query string
  * @param {string} searchInput - User input for search
  * @param {string} activeView - Current active view
+ * @param {object} currentUser - Current logged-in user
+ * @param {function} onQuestionDeleted - Handler for question deletion
  * @returns {JSX.Element} - Rendered component
  */
-function Questions({ questions, allQuestionsCount, isLoading, error, searchQuery, searchInput, activeView }) {
+function Questions({ 
+  questions, 
+  allQuestionsCount, 
+  isLoading, 
+  error, 
+  searchQuery, 
+  searchInput, 
+  activeView, 
+  currentUser,
+  onQuestionDeleted 
+}) {
   // Show loading indicator when questions are being fetched
   if (isLoading) {
     return (
@@ -110,7 +122,12 @@ function Questions({ questions, allQuestionsCount, isLoading, error, searchQuery
       </h2>
       <div className="questions-list">
         {questions.map((question) => (
-          <QuestionItem key={question.id} question={question} />
+          <QuestionItem 
+            key={question.id} 
+            question={question} 
+            currentUser={currentUser}
+            onQuestionDeleted={onQuestionDeleted}
+          />
         ))}
       </div>
     </div>
