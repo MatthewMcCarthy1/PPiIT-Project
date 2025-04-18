@@ -34,51 +34,12 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
   const formatDate = (dateString) => {
     const options = { 
       year: 'numeric', 
-      month: 'short', 
+      month: 'long', 
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
-  /**
-   * Calculates time elapsed since question was posted
-   * 
-   * @param {string} dateString - ISO date string from database
-   * @returns {string} - Human readable time elapsed
-   */
-  const getTimeElapsed = (dateString) => {
-    const now = new Date();
-    const postedDate = new Date(dateString);
-    const seconds = Math.floor((now - postedDate) / 1000);
-    
-    let interval = Math.floor(seconds / 31536000);
-    if (interval >= 1) {
-      return interval === 1 ? "1 year ago" : `${interval} years ago`;
-    }
-    
-    interval = Math.floor(seconds / 2592000);
-    if (interval >= 1) {
-      return interval === 1 ? "1 month ago" : `${interval} months ago`;
-    }
-    
-    interval = Math.floor(seconds / 86400);
-    if (interval >= 1) {
-      return interval === 1 ? "1 day ago" : `${interval} days ago`;
-    }
-    
-    interval = Math.floor(seconds / 3600);
-    if (interval >= 1) {
-      return interval === 1 ? "1 hour ago" : `${interval} hours ago`;
-    }
-    
-    interval = Math.floor(seconds / 60);
-    if (interval >= 1) {
-      return interval === 1 ? "1 minute ago" : `${interval} minutes ago`;
-    }
-    
-    return "just now";
+    return `Posted on ${new Date(dateString).toLocaleDateString(undefined, options)}`;
   };
 
   /**
@@ -244,8 +205,8 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
             </div>
             <div className="user-details">
               <span className="question-author">{question.user_email}</span>
-              <span className="question-date" title={formatDate(question.created_at)}>
-                {getTimeElapsed(question.created_at)}
+              <span className="question-date">
+                {formatDate(question.created_at)}
               </span>
             </div>
           </div>

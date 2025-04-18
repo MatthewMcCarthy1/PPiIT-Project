@@ -200,6 +200,8 @@
 .question-date {
   font-size: 12px;
   color: #888;
+  display: block; /* Ensure it takes full width */
+  margin-top: 2px;
 }
 
 @media (max-width: 768px) {
@@ -220,6 +222,14 @@
   
   .question-tags {
     margin-bottom: 5px;
+  }
+  
+  .user-details {
+    max-width: 100%;
+  }
+  
+  .question-date {
+    font-size: 11px;
   }
 }
 
