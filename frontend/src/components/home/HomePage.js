@@ -192,6 +192,12 @@ function HomePage({ user, setUser }) {
     }
   };
 
+  // Function to handle question deletion
+  const handleQuestionDeleted = (questionId) => {
+    // Update the questions list by filtering out the deleted question
+    setQuestions(prevQuestions => prevQuestions.filter(q => parseInt(q.id) !== parseInt(questionId)));
+  };
+
   // Search handler
   const handleSearchInput = (e) => {
     setSearchInput(e.target.value);
@@ -351,6 +357,8 @@ function HomePage({ user, setUser }) {
               searchQuery={searchQuery}
               searchInput={searchInput}
               activeView={activeView}
+              currentUser={user}
+              onQuestionDeleted={handleQuestionDeleted}
             />
           </div>
         </div>
