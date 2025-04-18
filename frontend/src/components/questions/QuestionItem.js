@@ -11,7 +11,7 @@ import DeleteConfirmModal from "./DeleteConfirmModal";
  * @param {Object} question - Question object containing all question details
  * @returns {JSX.Element} - Rendered component
  */
-function QuestionItem({ question, currentUser, onQuestionDeleted }) {
+function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView }) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -114,13 +114,10 @@ function QuestionItem({ question, currentUser, onQuestionDeleted }) {
 
   // Handle click on question item
   const handleQuestionClick = () => {
-    // In future, navigate to question detail page
-    console.log(`Viewing question: ${question.title}`);
-    
-    // For now, just show an alert
-    alert(`This would open the full question: "${question.title}"`);
-    
-    // In future, increment view count here by calling an API
+    // Call the passed handler to show the full question
+    if (onQuestionView) {
+      onQuestionView(question);
+    }
   };
 
   // Handle deletion of the question
