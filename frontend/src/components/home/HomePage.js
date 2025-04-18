@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import QuestionModal from "../questions/QuestionModal";
 import Questions from "../questions/Questions";
+import FullQuestionModal from "../questions/FullQuestionModal";
 import "./HomePage.css";
 
 function HomePage({ user, setUser }) {
@@ -19,6 +20,7 @@ function HomePage({ user, setUser }) {
   const [popularTags, setPopularTags] = useState([]);
   const [selectedTag, setSelectedTag] = useState(null);
   const [sortOption, setSortOption] = useState("newest");
+  const [viewingQuestion, setViewingQuestion] = useState(null);
 
   // Function to fetch questions from the backend
   const fetchQuestions = async () => {
@@ -198,6 +200,16 @@ function HomePage({ user, setUser }) {
     setQuestions(prevQuestions => prevQuestions.filter(q => parseInt(q.id) !== parseInt(questionId)));
   };
 
+  // Function to handle viewing a full question
+  const handleQuestionView = (question) => {
+    setViewingQuestion(question);
+  };
+  
+  // Function to close the full question view
+  const closeFullQuestion = () => {
+    setViewingQuestion(null);
+  };
+
   // Search handler
   const handleSearchInput = (e) => {
     setSearchInput(e.target.value);
@@ -359,6 +371,7 @@ function HomePage({ user, setUser }) {
               activeView={activeView}
               currentUser={user}
               onQuestionDeleted={handleQuestionDeleted}
+              onQuestionView={handleQuestionView}
             />
           </div>
         </div>
@@ -370,6 +383,13 @@ function HomePage({ user, setUser }) {
         onClose={toggleQuestionModal} 
         onSubmit={handleQuestionSubmit}
         submissionStatus={submissionStatus}
+      />
+      
+      {/* Full question view modal */}
+      <FullQuestionModal
+        isOpen={viewingQuestion !== null}
+        onClose={closeFullQuestion}
+        question={viewingQuestion}
       />
     </div>
   );
