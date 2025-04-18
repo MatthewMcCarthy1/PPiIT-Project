@@ -54,6 +54,9 @@ try {
             case 'submitQuestion':
                 submitQuestion($conn, $data);
                 break;
+            case 'deleteQuestion':
+                deleteQuestion($conn, $data);
+                break;
             default:
                 echo json_encode(["success" => false, "message" => "Invalid action"]);
         }
@@ -292,6 +295,94 @@ function submitQuestion($conn, $data)
         echo json_encode([
             "success" => false, 
             "message" => "Error processing question"
+        ]);
+    }
+}
+
+/**
+ * Delete a question from the database
+ * Ensures only the owner can delete their own questions
+ */
+function deleteQuestion($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->questionId) || !isset($data->userId)) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $questionId = intval($data->questionId);
+    $userId = intval($data->userId);
+
+    try {
+        // First check if the user is the owner of this question
+        $checkStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
+        if (!$checkStmt) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+
+        $checkStmt->bind_param("i", $questionId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+
+        // If question doesn't exist
+        if ($result->num_rows === 0) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Question not found"
+            ]);
+            return;
+        }
+
+        // Check if user is the owner
+        $question = $result->fetch_assoc();
+        if (intval($question['user_id']) !== $userId) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "You can only delete your own questions"
+            ]);
+            return;
+        }
+
+        // User is authorized, proceed with deletion
+        $deleteStmt = $conn->prepare("DELETE FROM questions WHERE id = ?");
+        if (!$deleteStmt) {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error during deletion"
+            ]);
+            return;
+        }
+
+        $deleteStmt->bind_param("i", $questionId);
+        
+        if ($deleteStmt->execute()) {
+            // Also remove any bookmarks for this question (if we implement server-side bookmarks)
+            // $conn->query("DELETE FROM bookmarks WHERE question_id = $questionId");
+            
+            echo json_encode([
+                "success" => true, 
+                "message" => "Question successfully deleted"
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to delete question"
+            ]);
+        }
+        
+        $deleteStmt->close();
+    } catch (Exception $e) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing delete request"
         ]);
     }
 }
