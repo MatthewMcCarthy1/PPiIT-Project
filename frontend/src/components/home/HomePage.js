@@ -390,6 +390,7 @@ function HomePage({ user, setUser }) {
         isOpen={viewingQuestion !== null}
         onClose={closeFullQuestion}
         question={viewingQuestion}
+        currentUser={user}
       />
     </div>
   );
