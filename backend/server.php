@@ -1,6 +1,9 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Start output buffering to prevent any unintended output
+ob_start();
+
+// Suppress warnings and notices that might appear in the JSON output
+error_reporting(E_ERROR | E_PARSE);
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -16,7 +19,7 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=utf-8");
 
 try {
     // Connect to the MySQL database
@@ -24,26 +27,54 @@ try {
 
     // Check connection
     if ($conn->connect_error) {
+        // Clear any output that might have been generated
+        ob_clean();
         die(json_encode(["success" => false, "message" => "Database connection failed"]));
     }
 
     // Handle GET requests separately
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        if (isset($_GET['action']) && $_GET['action'] === 'getQuestions') {
-            getQuestions($conn);
-            exit;
+        if (isset($_GET['action'])) {
+            switch ($_GET['action']) {
+                case 'getQuestions':
+                    // Clear any output before sending JSON
+                    ob_clean();
+                    getQuestions($conn);
+                    exit;
+                case 'getAnswers':
+                    // Clear any output before sending JSON
+                    ob_clean();
+                    getAnswers($conn);
+                    exit;
+                default:
+                    // Clear any output before sending JSON
+                    ob_clean();
+                    echo json_encode(["success" => false, "message" => "Invalid action"]);
+                    exit;
+            }
         }
     }
 
     // Decode the JSON data sent from the client
-    $data = json_decode(file_get_contents("php://input"));
+    $rawInput = file_get_contents("php://input");
+    $data = json_decode($rawInput);
 
     if (json_last_error() !== JSON_ERROR_NONE) {
-        die(json_encode(["success" => false, "message" => "Invalid request format"]));
+        // Clear any output before sending JSON
+        ob_clean();
+        die(json_encode([
+            "success" => false,
+            "message" => "Invalid request format",
+            "error" => json_last_error_msg(),
+            "input" => $rawInput
+        ]));
     }
 
     // Check if an action is specified in the request
     if (isset($data->action)) {
+        // Clear any output before sending JSON
+        ob_clean();
+
         switch ($data->action) {
             case 'login':
                 login($conn, $data);
@@ -57,17 +88,28 @@ try {
             case 'deleteQuestion':
                 deleteQuestion($conn, $data);
                 break;
+            case 'submitAnswer':
+                submitAnswer($conn, $data);
+                break;
             default:
                 echo json_encode(["success" => false, "message" => "Invalid action"]);
         }
     } else {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "No action specified"]);
     }
 
     // Close the database connection
     $conn->close();
 } catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "Server error"]);
+    // Clear any output before sending JSON
+    ob_clean();
+    echo json_encode([
+        "success" => false,
+        "message" => "Server error",
+        "error" => $e->getMessage()
+    ]);
 }
 
 // Function to get all questions from the database with optional filtering
@@ -79,7 +121,8 @@ function getQuestions($conn) {
     $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
     
     // Build the SQL query with JOIN
-    $sql = "SELECT q.*, u.email as user_email 
+    $sql = "SELECT q.*, u.email as user_email, 
+            (SELECT COUNT(*) FROM answers WHERE question_id = q.id) as answer_count
             FROM questions q 
             JOIN users u ON q.user_id = u.id ";
     
@@ -125,6 +168,8 @@ function getQuestions($conn) {
     if (!empty($params)) {
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Error preparing query: " . $conn->error
@@ -150,6 +195,8 @@ function getQuestions($conn) {
     
     // Handle query execution errors
     if ($result === false) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode([
             "success" => false, 
             "message" => "Error retrieving questions: " . $conn->error
@@ -167,6 +214,8 @@ function getQuestions($conn) {
     }
     
     // Return JSON response with success status and questions array
+    // Clear any output before sending JSON
+    ob_clean();
     echo json_encode([
         "success" => true,
         "count" => $count,
@@ -182,6 +231,8 @@ function login($conn, $data)
 
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Invalid email format"]);
         return;
     }
@@ -196,11 +247,17 @@ function login($conn, $data)
         $user = $result->fetch_assoc();
         // Verify the password
         if (password_verify($password, $user['password'])) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
         } else {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode(["success" => false, "message" => "Invalid password"]);
         }
     } else {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "User not found"]);
     }
 }
@@ -213,18 +270,24 @@ function register($conn, $data)
 
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Invalid email format"]);
         return;
     }
 
     // Check if the email ends with @atu.ie
     if (!preg_match('/@atu\.ie$/', $email)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
         return;
     }
 
     // Check if password is minimum 8 characters long
     if (strlen($password) < 8) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Password must be at least 8 characters long"]);
         return;
     }
@@ -238,12 +301,16 @@ function register($conn, $data)
 
     if ($stmt->execute()) {
         $user_id = $conn->insert_id; // Get the ID of the newly created user
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode([
             "success" => true, 
             "message" => "User registered successfully",
             "user" => ["id" => $user_id, "email" => $email]
         ]);
     } else {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Error registering user"]);
     }
 }
@@ -253,12 +320,16 @@ function submitQuestion($conn, $data)
 {
     // Verify user authentication before allowing question submission
     if (!isset($data->userId) || empty($data->userId)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "User authentication required"]);
         return;
     }
 
     // Validate required question fields
     if (empty($data->title) || empty($data->body)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode(["success" => false, "message" => "Title and body are required"]);
         return;
     }
@@ -267,6 +338,8 @@ function submitQuestion($conn, $data)
         // Prepare SQL statement to insert the new question
         $stmt = $conn->prepare("INSERT INTO questions (user_id, title, body, tags) VALUES (?, ?, ?, ?)");
         if (!$stmt) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode(["success" => false, "message" => "Database error"]);
             return;
         }
@@ -277,12 +350,16 @@ function submitQuestion($conn, $data)
         // Execute the statement and handle result
         if ($stmt->execute()) {
             $questionId = $stmt->insert_id; // Get ID of newly created question
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => true, 
                 "message" => "Question submitted successfully",
                 "questionId" => $questionId
             ]);
         } else {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Error submitting question"
@@ -291,7 +368,8 @@ function submitQuestion($conn, $data)
         
         $stmt->close();
     } catch (Exception $e) {
-        // Handle any unexpected errors during processing
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode([
             "success" => false, 
             "message" => "Error processing question"
@@ -306,6 +384,8 @@ function submitQuestion($conn, $data)
 function deleteQuestion($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->questionId) || !isset($data->userId)) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode([
             "success" => false, 
             "message" => "Missing required parameters"
@@ -321,6 +401,8 @@ function deleteQuestion($conn, $data) {
         // First check if the user is the owner of this question
         $checkStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
         if (!$checkStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Database error"
@@ -334,6 +416,8 @@ function deleteQuestion($conn, $data) {
 
         // If question doesn't exist
         if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Question not found"
@@ -344,6 +428,8 @@ function deleteQuestion($conn, $data) {
         // Check if user is the owner
         $question = $result->fetch_assoc();
         if (intval($question['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "You can only delete your own questions"
@@ -354,6 +440,8 @@ function deleteQuestion($conn, $data) {
         // User is authorized, proceed with deletion
         $deleteStmt = $conn->prepare("DELETE FROM questions WHERE id = ?");
         if (!$deleteStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Database error during deletion"
@@ -364,14 +452,15 @@ function deleteQuestion($conn, $data) {
         $deleteStmt->bind_param("i", $questionId);
         
         if ($deleteStmt->execute()) {
-            // Also remove any bookmarks for this question (if we implement server-side bookmarks)
-            // $conn->query("DELETE FROM bookmarks WHERE question_id = $questionId");
-            
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => true, 
                 "message" => "Question successfully deleted"
             ]);
         } else {
+            // Clear any output before sending JSON
+            ob_clean();
             echo json_encode([
                 "success" => false, 
                 "message" => "Failed to delete question"
@@ -380,9 +469,156 @@ function deleteQuestion($conn, $data) {
         
         $deleteStmt->close();
     } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
         echo json_encode([
             "success" => false, 
             "message" => "Error processing delete request"
+        ]);
+    }
+}
+
+/**
+ * Submit an answer to a question
+ */
+function submitAnswer($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->questionId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    try {
+        // First verify the question exists
+        $checkStmt = $conn->prepare("SELECT id FROM questions WHERE id = ?");
+        $checkStmt->bind_param("i", $data->questionId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Question not found"
+            ]);
+            return;
+        }
+        
+        // Insert the answer
+        $stmt = $conn->prepare("INSERT INTO answers (question_id, user_id, body) VALUES (?, ?, ?)");
+        if (!$stmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+        
+        $stmt->bind_param("iis", $data->questionId, $data->userId, $data->body);
+        
+        if ($stmt->execute()) {
+            $answerId = $stmt->insert_id;
+            
+            // Update the answer count in the questions table
+            $updateStmt = $conn->prepare("UPDATE questions SET answer_count = answer_count + 1 WHERE id = ?");
+            $updateStmt->bind_param("i", $data->questionId);
+            $updateStmt->execute();
+            
+            // Fetch the created answer with user info for immediate display
+            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
+                                        JOIN users u ON a.user_id = u.id 
+                                        WHERE a.id = ?");
+            $fetchStmt->bind_param("i", $answerId);
+            $fetchStmt->execute();
+            $answerResult = $fetchStmt->get_result();
+            $answer = $answerResult->fetch_assoc();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Answer submitted successfully",
+                "answer" => $answer
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Error submitting answer"
+            ]);
+        }
+        
+        $stmt->close();
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Get answers for a specific question
+ */
+function getAnswers($conn) {
+    // Check if question ID is provided
+    if (!isset($_GET['questionId'])) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Question ID is required"
+        ]);
+        return;
+    }
+    
+    $questionId = intval($_GET['questionId']);
+    
+    try {
+        // Fetch answers with user information
+        $stmt = $conn->prepare("SELECT a.*, u.email as user_email 
+                               FROM answers a 
+                               JOIN users u ON a.user_id = u.id 
+                               WHERE a.question_id = ? 
+                               ORDER BY a.created_at ASC");
+        
+        $stmt->bind_param("i", $questionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $answers = [];
+        $count = 0;
+        
+        while ($row = $result->fetch_assoc()) {
+            $answers[] = $row;
+            $count++;
+        }
+        
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => true,
+            "count" => $count,
+            "answers" => $answers
+        ]);
+        
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error retrieving answers: " . $e->getMessage()
         ]);
     }
 }
