@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "./questions-css/FullQuestionModal.css";
 
 /**
@@ -7,9 +7,136 @@ import "./questions-css/FullQuestionModal.css";
  * @param {boolean} isOpen - Whether the modal is visible
  * @param {function} onClose - Function to call when closing the modal
  * @param {Object} question - The complete question data to display
+ * @param {Object} currentUser - The current logged-in user
  */
-function FullQuestionModal({ isOpen, onClose, question }) {
+function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
+  // State for the answer input
+  const [answerBody, setAnswerBody] = useState("");
+  
+  // State for answers data
+  const [answers, setAnswers] = useState([]);
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
+  const [answerError, setAnswerError] = useState(null);
+  
+  // State for answer submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState(null);
+
+  // Fetch answers when question changes
+  useEffect(() => {
+    if (isOpen && question) {
+      fetchAnswers();
+    }
+    
+    // Reset states when modal is closed
+    if (!isOpen) {
+      setAnswerBody("");
+      setSubmissionStatus(null);
+    }
+  }, [isOpen, question]);
+
   if (!isOpen || !question) return null;
+
+  /**
+   * Fetch answers for the current question
+   */
+  const fetchAnswers = async () => {
+    setIsLoadingAnswers(true);
+    setAnswerError(null);
+    
+    try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(`${backendUrl}?action=getAnswers&questionId=${question.id}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setAnswers(data.answers || []);
+      } else {
+        setAnswerError(data.message || 'Failed to load answers');
+      }
+    } catch (error) {
+      setAnswerError('Network error. Please try again later.');
+    } finally {
+      setIsLoadingAnswers(false);
+    }
+  };
+
+  /**
+   * Handle answer submission
+   */
+  const handleAnswerSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate answer
+    if (!answerBody.trim()) {
+      setSubmissionStatus({
+        type: 'error',
+        message: 'Answer cannot be empty'
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmissionStatus(null);
+    
+    try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'submitAnswer', 
+          questionId: question.id,
+          userId: currentUser.id,
+          body: answerBody 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Add the new answer to the list
+        setAnswers(prevAnswers => [data.answer, ...prevAnswers]);
+        
+        // Clear the input and show success message
+        setAnswerBody("");
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Answer posted successfully!'
+        });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSubmissionStatus(null);
+        }, 3000);
+      } else {
+        setSubmissionStatus({
+          type: 'error',
+          message: data.message || 'Failed to post answer'
+        });
+      }
+    } catch (error) {
+      setSubmissionStatus({
+        type: 'error',
+        message: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   /**
    * Formats a date string into a more readable format
@@ -78,24 +205,95 @@ function FullQuestionModal({ isOpen, onClose, question }) {
         
         <div className="answers-section">
           <h3 className="answers-header">
-            <i className="fas fa-comment-alt"></i> Answers (0)
+            <i className="fas fa-comment-alt"></i> Answers ({answers.length})
           </h3>
           
-          <div className="no-answers">
-            <i className="fas fa-comments"></i>
-            <p>No answers yet. Be the first to answer this question!</p>
-          </div>
+          {/* Loading state */}
+          {isLoadingAnswers && (
+            <div className="answers-loading">
+              <div className="answer-spinner"></div>
+              <span>Loading answers...</span>
+            </div>
+          )}
           
-          {/* Answer form and list of answers */}
-          <div className="answer-form-placeholder">
-            <textarea 
-              placeholder="Write your answer here..." 
-              className="answer-input"
-              disabled
-            ></textarea>
-            <button className="post-answer-btn" disabled>
-              Post Your Answer <small>(Coming soon)</small>
-            </button>
+          {/* Error state */}
+          {answerError && !isLoadingAnswers && (
+            <div className="answers-error">
+              <i className="fas fa-exclamation-circle"></i>
+              <p>{answerError}</p>
+            </div>
+          )}
+          
+          {/* Empty state */}
+          {!isLoadingAnswers && !answerError && answers.length === 0 && (
+            <div className="no-answers">
+              <i className="fas fa-comments"></i>
+              <p>No answers yet. Be the first to answer this question!</p>
+            </div>
+          )}
+          
+          {/* Answer list */}
+          {!isLoadingAnswers && !answerError && answers.length > 0 && (
+            <div className="answers-list">
+              {answers.map(answer => (
+                <div key={answer.id} className="answer-item">
+                  <div className="answer-content">
+                    {answer.body}
+                  </div>
+                  <div className="answer-meta">
+                    <div className="answer-author">
+                      <div className="user-avatar small">
+                        {answer.user_email ? answer.user_email.charAt(0).toUpperCase() : '?'}
+                      </div>
+                      <div className="user-details">
+                        <span className="answer-author-name">{answer.user_email}</span>
+                        <span className="answer-date">
+                          Answered on {formatDate(answer.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Answer form */}
+          <div className="answer-form">
+            {submissionStatus && (
+              <div className={`answer-submission-status ${submissionStatus.type}`}>
+                <i className={`fas ${submissionStatus.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+                {submissionStatus.message}
+              </div>
+            )}
+            
+            <form onSubmit={handleAnswerSubmit}>
+              <textarea 
+                value={answerBody}
+                onChange={(e) => setAnswerBody(e.target.value)}
+                placeholder="Write your answer here..." 
+                className="answer-input"
+                disabled={isSubmitting}
+                maxLength="2000"
+              ></textarea>
+              
+              <div className="answer-form-actions">
+                <span className="answer-char-count">
+                  {answerBody.length}/2000 characters
+                </span>
+                <button 
+                  type="submit" 
+                  className="post-answer-btn"
+                  disabled={isSubmitting || !answerBody.trim()}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Posting...
+                    </>
+                  ) : 'Post Your Answer'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
