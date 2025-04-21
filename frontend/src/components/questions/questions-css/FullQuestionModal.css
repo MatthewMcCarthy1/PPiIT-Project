@@ -171,6 +171,51 @@
   color: #ff4b2b;
 }
 
+/* Answers loading state */
+.answers-loading {
+  background-color: #fff;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.answer-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 75, 43, 0.1);
+  border-radius: 50%;
+  border-top-color: #ff4b2b;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Answers error state */
+.answers-error {
+  background-color: #fff;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: #e53e3e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.answers-error i {
+  font-size: 24px;
+}
+
+/* No answers state */
 .no-answers {
   background-color: #fff;
   padding: 25px;
@@ -190,43 +235,152 @@
   margin: 0;
 }
 
-.answer-form-placeholder {
-  margin-top: 25px;
+/* Answers list */
+.answers-list {
+  margin-bottom: 20px;
+}
+
+.answer-item {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.answer-content {
+  line-height: 1.7;
+  color: #4a5568;
+  white-space: pre-line;
+  margin-bottom: 15px;
+}
+
+.answer-meta {
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid #edf2f7;
+}
+
+.answer-author {
+  display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+.user-avatar.small {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+}
+
+.answer-author-name {
+  font-weight: bold;
+  color: #2d3748;
+  font-size: 14px;
+}
+
+.answer-date {
+  font-size: 12px;
+  color: #718096;
+}
+
+/* Answer form styles */
+.answer-form {
+  margin-top: 25px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .answer-input {
   width: 100%;
-  min-height: 100px;
+  min-height: 120px;
   padding: 15px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   resize: vertical;
   font-family: inherit;
   font-size: 14px;
+  margin-bottom: 15px;
+  transition: border-color 0.2s ease;
+}
+
+.answer-input:focus {
+  outline: none;
+  border-color: #ff4b2b;
+  box-shadow: 0 0 0 2px rgba(255, 75, 43, 0.1);
+}
+
+.answer-form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.answer-char-count {
+  color: #718096;
+  font-size: 12px;
 }
 
 .post-answer-btn {
-  align-self: flex-end;
   background-color: #ff4b2b;
   color: white;
   border: none;
   padding: 10px 20px;
   border-radius: 5px;
-  cursor: not-allowed;
+  cursor: pointer;
   font-weight: bold;
   font-size: 14px;
-  opacity: 0.7;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  transition: background-color 0.2s ease;
 }
 
-.post-answer-btn small {
-  font-weight: normal;
-  opacity: 0.8;
+.post-answer-btn:hover:not(:disabled) {
+  background-color: #e53319;
+}
+
+.post-answer-btn:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.post-answer-btn i {
+  font-size: 12px;
+}
+
+/* Submission status message */
+.answer-submission-status {
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.answer-submission-status i {
+  font-size: 16px;
+}
+
+.answer-submission-status.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.answer-submission-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 @media (max-width: 768px) {
@@ -244,5 +398,16 @@
   
   .full-question-header h2 {
     font-size: 20px;
+  }
+  
+  .answer-form-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .post-answer-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
