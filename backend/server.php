@@ -103,6 +103,9 @@ try {
             case 'incrementViewCount':
                 incrementViewCount($conn, $data);
                 break;
+            case 'acceptAnswer':
+                acceptAnswer($conn, $data);
+                break;
             default:
                 echo json_encode(["success" => false, "message" => "Invalid action"]);
         }
@@ -967,6 +970,124 @@ function incrementViewCount($conn, $data) {
 }
 
 /**
+ * Mark an answer as accepted
+ * Only the question owner can mark answers as accepted
+ */
+function acceptAnswer($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->answerId) || !isset($data->userId)) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $answerId = intval($data->answerId);
+    $userId = intval($data->userId);
+
+    try {
+        // Get the question ID from the answer
+        $questionStmt = $conn->prepare("SELECT question_id FROM answers WHERE id = ?");
+        if (!$questionStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+
+        $questionStmt->bind_param("i", $answerId);
+        $questionStmt->execute();
+        $result = $questionStmt->get_result();
+
+        // Check if answer exists
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Answer not found"
+            ]);
+            return;
+        }
+
+        $answer = $result->fetch_assoc();
+        $questionId = $answer['question_id'];
+        
+        // Now check if the user is the owner of the question
+        $ownerCheckStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
+        $ownerCheckStmt->bind_param("i", $questionId);
+        $ownerCheckStmt->execute();
+        $ownerResult = $ownerCheckStmt->get_result();
+        $question = $ownerResult->fetch_assoc();
+        
+        if (intval($question['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Only the question owner can accept answers"
+            ]);
+            return;
+        }
+        
+        // First unmark any previously accepted answer for this question
+        $clearStmt = $conn->prepare("UPDATE answers SET is_accepted = 0 WHERE question_id = ?");
+        $clearStmt->bind_param("i", $questionId);
+        $clearStmt->execute();
+        
+        // Now mark this answer as accepted
+        $acceptStmt = $conn->prepare("UPDATE answers SET is_accepted = 1 WHERE id = ?");
+        $acceptStmt->bind_param("i", $answerId);
+        
+        if ($acceptStmt->execute()) {
+            // Mark the question as having an accepted answer
+            $updateQuestionStmt = $conn->prepare("UPDATE questions SET has_accepted_answer = 1 WHERE id = ?");
+            $updateQuestionStmt->bind_param("i", $questionId);
+            $updateQuestionStmt->execute();
+            
+            // Fetch the updated answer with user info
+            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
+                                         JOIN users u ON a.user_id = u.id 
+                                         WHERE a.id = ?");
+            $fetchStmt->bind_param("i", $answerId);
+            $fetchStmt->execute();
+            $answerResult = $fetchStmt->get_result();
+            $updatedAnswer = $answerResult->fetch_assoc();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Answer marked as accepted",
+                "answer" => $updatedAnswer
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to accept answer"
+            ]);
+        }
+        
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
  * Get answers for a specific question
  */
 function getAnswers($conn) {
@@ -985,11 +1106,12 @@ function getAnswers($conn) {
     
     try {
         // Fetch answers with user information
+        // Updated to order by is_accepted first (accepted answers come first)
         $stmt = $conn->prepare("SELECT a.*, u.email as user_email 
                                FROM answers a 
                                JOIN users u ON a.user_id = u.id 
                                WHERE a.question_id = ? 
-                               ORDER BY a.created_at ASC");
+                               ORDER BY a.is_accepted DESC, a.created_at ASC");
         
         $stmt->bind_param("i", $questionId);
         $stmt->execute();
