@@ -5,6 +5,16 @@ ob_start();
 // Suppress warnings and notices that might appear in the JSON output
 error_reporting(E_ERROR | E_PARSE);
 
+/**
+ * Helper function for sending consistent JSON responses
+ * Cleans output buffer and sends a properly formatted JSON response
+ */
+function sendJsonResponse($data) {
+    ob_clean();
+    echo json_encode($data);
+    return;
+}
+
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: *");
@@ -27,7 +37,6 @@ try {
 
     // Check connection
     if ($conn->connect_error) {
-        // Clear any output that might have been generated
         ob_clean();
         die(json_encode(["success" => false, "message" => "Database connection failed"]));
     }
@@ -37,24 +46,19 @@ try {
         if (isset($_GET['action'])) {
             switch ($_GET['action']) {
                 case 'getQuestions':
-                    // Clear any output before sending JSON
                     ob_clean();
                     getQuestions($conn);
                     exit;
                 case 'getAnswers':
-                    // Clear any output before sending JSON
                     ob_clean();
                     getAnswers($conn);
                     exit;
                 case 'getComments':
-                    // Clear any output before sending JSON
                     ob_clean();
                     getComments($conn);
                     exit;
                 default:
-                    // Clear any output before sending JSON
-                    ob_clean();
-                    echo json_encode(["success" => false, "message" => "Invalid action"]);
+                    sendJsonResponse(["success" => false, "message" => "Invalid action"]);
                     exit;
             }
         }
@@ -65,7 +69,6 @@ try {
     $data = json_decode($rawInput);
 
     if (json_last_error() !== JSON_ERROR_NONE) {
-        // Clear any output before sending JSON
         ob_clean();
         die(json_encode([
             "success" => false,
@@ -77,7 +80,6 @@ try {
 
     // Check if an action is specified in the request
     if (isset($data->action)) {
-        // Clear any output before sending JSON
         ob_clean();
 
         switch ($data->action) {
@@ -118,24 +120,91 @@ try {
                 deleteComment($conn, $data);
                 break;
             default:
-                echo json_encode(["success" => false, "message" => "Invalid action"]);
+                sendJsonResponse(["success" => false, "message" => "Invalid action"]);
         }
     } else {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "No action specified"]);
+        sendJsonResponse(["success" => false, "message" => "No action specified"]);
     }
 
     // Close the database connection
     $conn->close();
 } catch (Exception $e) {
-    // Clear any output before sending JSON
-    ob_clean();
-    echo json_encode([
+    sendJsonResponse([
         "success" => false,
         "message" => "Server error",
         "error" => $e->getMessage()
     ]);
+}
+
+/**
+ * Database helper functions to reduce code duplication
+ */
+function prepareStatement($conn, $sql, $errorMessage = "Database error") {
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        sendJsonResponse(["success" => false, "message" => $errorMessage]);
+        return null;
+    }
+    return $stmt;
+}
+
+/**
+ * Verify resource ownership (question, answer, or comment)
+ */
+function verifyOwnership($conn, $table, $id, $userId, $notFoundMessage, $notOwnerMessage) {
+    $stmt = prepareStatement($conn, "SELECT user_id FROM $table WHERE id = ?");
+    if (!$stmt) return false;
+    
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        sendJsonResponse(["success" => false, "message" => $notFoundMessage]);
+        return false;
+    }
+    
+    $item = $result->fetch_assoc();
+    if (intval($item['user_id']) !== intval($userId)) {
+        sendJsonResponse(["success" => false, "message" => $notOwnerMessage]);
+        return false;
+    }
+    
+    return true;
+}
+
+function fetchQuestionWithDetails($conn, $questionId) {
+    $stmt = prepareStatement(
+        $conn, 
+        "SELECT q.*, u.email as user_email,
+         (SELECT COUNT(*) FROM answers WHERE question_id = q.id) as answer_count
+         FROM questions q 
+         JOIN users u ON q.user_id = u.id 
+         WHERE q.id = ?"
+    );
+    
+    if (!$stmt) return null;
+    
+    $stmt->bind_param("i", $questionId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc();
+}
+
+function fetchEntityWithUser($conn, $table, $id) {
+    $stmt = prepareStatement(
+        $conn,
+        "SELECT t.*, u.email as user_email FROM $table t
+         JOIN users u ON t.user_id = u.id
+         WHERE t.id = ?"
+    );
+    
+    if (!$stmt) return null;
+    
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc();
 }
 
 // Function to get all questions from the database with optional filtering
@@ -186,7 +255,6 @@ function getQuestions($conn) {
     if ($sort === 'oldest') {
         $sql .= "ORDER BY q.created_at ASC";
     } else {
-        // Default to newest
         $sql .= "ORDER BY q.created_at DESC";
     }
     
@@ -194,9 +262,7 @@ function getQuestions($conn) {
     if (!empty($params)) {
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => false, 
                 "message" => "Error preparing query: " . $conn->error
             ]);
@@ -221,9 +287,7 @@ function getQuestions($conn) {
     
     // Handle query execution errors
     if ($result === false) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error retrieving questions: " . $conn->error
         ]);
@@ -239,10 +303,7 @@ function getQuestions($conn) {
         $count++;
     }
     
-    // Return JSON response with success status and questions array
-    // Clear any output before sending JSON
-    ob_clean();
-    echo json_encode([
+    sendJsonResponse([
         "success" => true,
         "count" => $count,
         "questions" => $questions
@@ -250,16 +311,13 @@ function getQuestions($conn) {
 }
 
 // Function to handle user login
-function login($conn, $data)
-{
+function login($conn, $data) {
     $email = $data->email;
     $password = $data->password;
 
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Invalid email format"]);
+        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
         return;
     }
 
@@ -273,48 +331,35 @@ function login($conn, $data)
         $user = $result->fetch_assoc();
         // Verify the password
         if (password_verify($password, $user['password'])) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
+            sendJsonResponse(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode(["success" => false, "message" => "Invalid password"]);
+            sendJsonResponse(["success" => false, "message" => "Invalid password"]);
         }
     } else {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "User not found"]);
+        sendJsonResponse(["success" => false, "message" => "User not found"]);
     }
 }
 
 // Function to handle user registration
-function register($conn, $data)
-{
+function register($conn, $data) {
     $email = $data->email;
     $password = $data->password;
 
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Invalid email format"]);
+        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
         return;
     }
 
     // Check if the email ends with @atu.ie
     if (!preg_match('/@atu\.ie$/', $email)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
+        sendJsonResponse(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
         return;
     }
 
     // Check if password is minimum 8 characters long
     if (strlen($password) < 8) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Password must be at least 8 characters long"]);
+        sendJsonResponse(["success" => false, "message" => "Password must be at least 8 characters long"]);
         return;
     }
 
@@ -327,36 +372,27 @@ function register($conn, $data)
 
     if ($stmt->execute()) {
         $user_id = $conn->insert_id; // Get the ID of the newly created user
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => true, 
             "message" => "User registered successfully",
             "user" => ["id" => $user_id, "email" => $email]
         ]);
     } else {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Error registering user"]);
+        sendJsonResponse(["success" => false, "message" => "Error registering user"]);
     }
 }
 
 // Function to handle question submission from users
-function submitQuestion($conn, $data)
-{
+function submitQuestion($conn, $data) {
     // Verify user authentication before allowing question submission
     if (!isset($data->userId) || empty($data->userId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "User authentication required"]);
+        sendJsonResponse(["success" => false, "message" => "User authentication required"]);
         return;
     }
 
     // Validate required question fields
     if (empty($data->title) || empty($data->body)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode(["success" => false, "message" => "Title and body are required"]);
+        sendJsonResponse(["success" => false, "message" => "Title and body are required"]);
         return;
     }
 
@@ -364,9 +400,7 @@ function submitQuestion($conn, $data)
         // Prepare SQL statement to insert the new question
         $stmt = $conn->prepare("INSERT INTO questions (user_id, title, body, tags) VALUES (?, ?, ?, ?)");
         if (!$stmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode(["success" => false, "message" => "Database error"]);
+            sendJsonResponse(["success" => false, "message" => "Database error"]);
             return;
         }
         
@@ -376,30 +410,18 @@ function submitQuestion($conn, $data)
         // Execute the statement and handle result
         if ($stmt->execute()) {
             $questionId = $stmt->insert_id; // Get ID of newly created question
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Question submitted successfully",
                 "questionId" => $questionId
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Error submitting question"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Error submitting question"]);
         }
         
         $stmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Error processing question"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Error processing question: " . $e->getMessage()]);
     }
 }
 
@@ -412,12 +434,7 @@ function updateQuestion($conn, $data) {
     if (!isset($data->questionId) || !isset($data->userId) || 
         !isset($data->title) || !isset($data->body) || 
         empty(trim($data->title)) || empty(trim($data->body))) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -430,91 +447,32 @@ function updateQuestion($conn, $data) {
 
     try {
         // First check if the user is the owner of this question
-        $checkStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
-        if (!$checkStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
-
-        $checkStmt->bind_param("i", $questionId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-
-        // If question doesn't exist
-        if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Question not found"
-            ]);
-            return;
-        }
-
-        // Check if user is the owner
-        $question = $result->fetch_assoc();
-        if (intval($question['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "You can only edit your own questions"
-            ]);
+        if (!verifyOwnership($conn, "questions", $questionId, $userId, "Question not found", "You can only edit your own questions")) {
             return;
         }
 
         // User is authorized, proceed with update
-        $updateStmt = $conn->prepare("UPDATE questions SET title = ?, body = ?, tags = ? WHERE id = ?");
-        if (!$updateStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error during update"
-            ]);
-            return;
-        }
+        $updateStmt = prepareStatement($conn, "UPDATE questions SET title = ?, body = ?, tags = ? WHERE id = ?");
+        if (!$updateStmt) return;
 
         $updateStmt->bind_param("sssi", $title, $body, $tags, $questionId);
         
         if ($updateStmt->execute()) {
             // Fetch the updated question with user info
-            $fetchStmt = $conn->prepare("SELECT q.*, u.email as user_email,
-                                       (SELECT COUNT(*) FROM answers WHERE question_id = q.id) as answer_count
-                                       FROM questions q 
-                                       JOIN users u ON q.user_id = u.id 
-                                       WHERE q.id = ?");
-            $fetchStmt->bind_param("i", $questionId);
-            $fetchStmt->execute();
-            $questionResult = $fetchStmt->get_result();
-            $updatedQuestion = $questionResult->fetch_assoc();
+            $updatedQuestion = fetchQuestionWithDetails($conn, $questionId);
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Question successfully updated",
                 "question" => $updatedQuestion
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to update question"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to update question"]);
         }
         
         $updateStmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing update request: " . $e->getMessage()
         ]);
@@ -528,12 +486,7 @@ function updateQuestion($conn, $data) {
 function deleteQuestion($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->questionId) || !isset($data->userId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -543,81 +496,27 @@ function deleteQuestion($conn, $data) {
 
     try {
         // First check if the user is the owner of this question
-        $checkStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
-        if (!$checkStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
-
-        $checkStmt->bind_param("i", $questionId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-
-        // If question doesn't exist
-        if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Question not found"
-            ]);
-            return;
-        }
-
-        // Check if user is the owner
-        $question = $result->fetch_assoc();
-        if (intval($question['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "You can only delete your own questions"
-            ]);
+        if (!verifyOwnership($conn, "questions", $questionId, $userId, "Question not found", "You can only delete your own questions")) {
             return;
         }
 
         // User is authorized, proceed with deletion
-        $deleteStmt = $conn->prepare("DELETE FROM questions WHERE id = ?");
-        if (!$deleteStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error during deletion"
-            ]);
-            return;
-        }
+        $deleteStmt = prepareStatement($conn, "DELETE FROM questions WHERE id = ?");
+        if (!$deleteStmt) return;
 
         $deleteStmt->bind_param("i", $questionId);
         
         if ($deleteStmt->execute()) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => true, 
-                "message" => "Question successfully deleted"
-            ]);
+            sendJsonResponse(["success" => true, "message" => "Question successfully deleted"]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to delete question"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to delete question"]);
         }
         
         $deleteStmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
-            "message" => "Error processing delete request"
+            "message" => "Error processing delete request: " . $e->getMessage()
         ]);
     }
 }
@@ -628,43 +527,27 @@ function deleteQuestion($conn, $data) {
 function submitAnswer($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->questionId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
     try {
         // First verify the question exists
-        $checkStmt = $conn->prepare("SELECT id FROM questions WHERE id = ?");
+        $checkStmt = prepareStatement($conn, "SELECT id FROM questions WHERE id = ?");
+        if (!$checkStmt) return;
+        
         $checkStmt->bind_param("i", $data->questionId);
         $checkStmt->execute();
         $result = $checkStmt->get_result();
         
         if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Question not found"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Question not found"]);
             return;
         }
         
         // Insert the answer
-        $stmt = $conn->prepare("INSERT INTO answers (question_id, user_id, body) VALUES (?, ?, ?)");
-        if (!$stmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
+        $stmt = prepareStatement($conn, "INSERT INTO answers (question_id, user_id, body) VALUES (?, ?, ?)");
+        if (!$stmt) return;
         
         $stmt->bind_param("iis", $data->questionId, $data->userId, $data->body);
         
@@ -672,40 +555,25 @@ function submitAnswer($conn, $data) {
             $answerId = $stmt->insert_id;
             
             // Update the answer count in the questions table
-            $updateStmt = $conn->prepare("UPDATE questions SET answer_count = answer_count + 1 WHERE id = ?");
-            $updateStmt->bind_param("i", $data->questionId);
-            $updateStmt->execute();
+            $updateStmt = prepareStatement($conn, "UPDATE questions SET answer_count = answer_count + 1 WHERE id = ?");
+            if ($updateStmt) {
+                $updateStmt->bind_param("i", $data->questionId);
+                $updateStmt->execute();
+            }
             
-            // Fetch the created answer with user info for immediate display
-            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
-                                        JOIN users u ON a.user_id = u.id 
-                                        WHERE a.id = ?");
-            $fetchStmt->bind_param("i", $answerId);
-            $fetchStmt->execute();
-            $answerResult = $fetchStmt->get_result();
-            $answer = $answerResult->fetch_assoc();
+            // Fetch the created answer with user info
+            $answer = fetchEntityWithUser($conn, "answers", $answerId);
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Answer submitted successfully",
                 "answer" => $answer
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Error submitting answer"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Error submitting answer"]);
         }
-        
-        $stmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
         ]);
@@ -719,12 +587,7 @@ function submitAnswer($conn, $data) {
 function deleteAnswer($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->answerId) || !isset($data->userId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -733,87 +596,47 @@ function deleteAnswer($conn, $data) {
     $userId = intval($data->userId);
 
     try {
-        // First check if the user is the owner of this answer
-        $checkStmt = $conn->prepare("SELECT user_id, question_id FROM answers WHERE id = ?");
-        if (!$checkStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
-
-        $checkStmt->bind_param("i", $answerId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-
-        // If answer doesn't exist
+        // Get question ID before checking ownership
+        $questionStmt = prepareStatement($conn, "SELECT question_id FROM answers WHERE id = ?");
+        if (!$questionStmt) return;
+        
+        $questionStmt->bind_param("i", $answerId);
+        $questionStmt->execute();
+        $result = $questionStmt->get_result();
+        
         if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Answer not found"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Answer not found"]);
             return;
         }
-
-        // Check if user is the owner
+        
         $answer = $result->fetch_assoc();
         $questionId = $answer['question_id'];
         
-        if (intval($answer['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "You can only delete your own answers"
-            ]);
+        // Verify ownership
+        if (!verifyOwnership($conn, "answers", $answerId, $userId, "Answer not found", "You can only delete your own answers")) {
             return;
         }
 
-        // User is authorized, proceed with deletion
-        $deleteStmt = $conn->prepare("DELETE FROM answers WHERE id = ?");
-        if (!$deleteStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error during deletion"
-            ]);
-            return;
-        }
+        // Delete the answer
+        $deleteStmt = prepareStatement($conn, "DELETE FROM answers WHERE id = ?");
+        if (!$deleteStmt) return;
 
         $deleteStmt->bind_param("i", $answerId);
         
         if ($deleteStmt->execute()) {
             // Decrement the answer count for the question
-            $updateStmt = $conn->prepare("UPDATE questions SET answer_count = GREATEST(answer_count - 1, 0) WHERE id = ?");
-            $updateStmt->bind_param("i", $questionId);
-            $updateStmt->execute();
+            $updateStmt = prepareStatement($conn, "UPDATE questions SET answer_count = GREATEST(answer_count - 1, 0) WHERE id = ?");
+            if ($updateStmt) {
+                $updateStmt->bind_param("i", $questionId);
+                $updateStmt->execute();
+            }
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => true, 
-                "message" => "Answer successfully deleted"
-            ]);
+            sendJsonResponse(["success" => true, "message" => "Answer successfully deleted"]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to delete answer"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to delete answer"]);
         }
-        
-        $deleteStmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing delete request: " . $e->getMessage()
         ]);
@@ -827,12 +650,7 @@ function deleteAnswer($conn, $data) {
 function updateAnswer($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->answerId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -842,90 +660,31 @@ function updateAnswer($conn, $data) {
     $body = trim($data->body);
 
     try {
-        // First check if the user is the owner of this answer
-        $checkStmt = $conn->prepare("SELECT user_id FROM answers WHERE id = ?");
-        if (!$checkStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
+        // Verify ownership
+        if (!verifyOwnership($conn, "answers", $answerId, $userId, "Answer not found", "You can only edit your own answers")) {
             return;
         }
 
-        $checkStmt->bind_param("i", $answerId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-
-        // If answer doesn't exist
-        if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Answer not found"
-            ]);
-            return;
-        }
-
-        // Check if user is the owner
-        $answer = $result->fetch_assoc();
-        if (intval($answer['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "You can only edit your own answers"
-            ]);
-            return;
-        }
-
-        // User is authorized, proceed with update
-        $updateStmt = $conn->prepare("UPDATE answers SET body = ? WHERE id = ?");
-        if (!$updateStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error during update"
-            ]);
-            return;
-        }
+        // Update the answer
+        $updateStmt = prepareStatement($conn, "UPDATE answers SET body = ? WHERE id = ?");
+        if (!$updateStmt) return;
 
         $updateStmt->bind_param("si", $body, $answerId);
         
         if ($updateStmt->execute()) {
             // Fetch the updated answer with user info
-            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
-                                         JOIN users u ON a.user_id = u.id 
-                                         WHERE a.id = ?");
-            $fetchStmt->bind_param("i", $answerId);
-            $fetchStmt->execute();
-            $answerResult = $fetchStmt->get_result();
-            $updatedAnswer = $answerResult->fetch_assoc();
+            $updatedAnswer = fetchEntityWithUser($conn, "answers", $answerId);
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Answer successfully updated",
                 "answer" => $updatedAnswer
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to update answer"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to update answer"]);
         }
-        
-        $updateStmt->close();
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing update request: " . $e->getMessage()
         ]);
@@ -938,12 +697,7 @@ function updateAnswer($conn, $data) {
 function incrementViewCount($conn, $data) {
     // Check if question ID is provided
     if (!isset($data->questionId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Question ID is required"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
         return;
     }
     
@@ -951,29 +705,18 @@ function incrementViewCount($conn, $data) {
     
     try {
         // Update view count in the database
-        $stmt = $conn->prepare("UPDATE questions SET views = views + 1 WHERE id = ?");
+        $stmt = prepareStatement($conn, "UPDATE questions SET views = views + 1 WHERE id = ?");
+        if (!$stmt) return;
+        
         $stmt->bind_param("i", $questionId);
         
         if ($stmt->execute()) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => true,
-                "message" => "View count incremented successfully"
-            ]);
+            sendJsonResponse(["success" => true, "message" => "View count incremented successfully"]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to increment view count"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to increment view count"]);
         }
-        
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
         ]);
@@ -987,12 +730,7 @@ function incrementViewCount($conn, $data) {
 function acceptAnswer($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->answerId) || !isset($data->userId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -1002,16 +740,8 @@ function acceptAnswer($conn, $data) {
 
     try {
         // Get the question ID from the answer
-        $questionStmt = $conn->prepare("SELECT question_id FROM answers WHERE id = ?");
-        if (!$questionStmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
+        $questionStmt = prepareStatement($conn, "SELECT question_id FROM answers WHERE id = ?");
+        if (!$questionStmt) return;
 
         $questionStmt->bind_param("i", $answerId);
         $questionStmt->execute();
@@ -1019,79 +749,53 @@ function acceptAnswer($conn, $data) {
 
         // Check if answer exists
         if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Answer not found"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Answer not found"]);
             return;
         }
 
         $answer = $result->fetch_assoc();
         $questionId = $answer['question_id'];
         
-        // Now check if the user is the owner of the question
-        $ownerCheckStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
-        $ownerCheckStmt->bind_param("i", $questionId);
-        $ownerCheckStmt->execute();
-        $ownerResult = $ownerCheckStmt->get_result();
-        $question = $ownerResult->fetch_assoc();
-        
-        if (intval($question['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Only the question owner can accept answers"
-            ]);
+        // Verify the user is the question owner
+        if (!verifyOwnership($conn, "questions", $questionId, $userId, "Question not found", 
+                             "Only the question owner can accept answers")) {
             return;
         }
         
-        // First unmark any previously accepted answer for this question
-        $clearStmt = $conn->prepare("UPDATE answers SET is_accepted = 0 WHERE question_id = ?");
-        $clearStmt->bind_param("i", $questionId);
-        $clearStmt->execute();
+        // Clear any previously accepted answers
+        $clearStmt = prepareStatement($conn, "UPDATE answers SET is_accepted = 0 WHERE question_id = ?");
+        if ($clearStmt) {
+            $clearStmt->bind_param("i", $questionId);
+            $clearStmt->execute();
+        }
         
-        // Now mark this answer as accepted
-        $acceptStmt = $conn->prepare("UPDATE answers SET is_accepted = 1 WHERE id = ?");
+        // Mark this answer as accepted
+        $acceptStmt = prepareStatement($conn, "UPDATE answers SET is_accepted = 1 WHERE id = ?");
+        if (!$acceptStmt) return;
+        
         $acceptStmt->bind_param("i", $answerId);
         
         if ($acceptStmt->execute()) {
             // Mark the question as having an accepted answer
-            $updateQuestionStmt = $conn->prepare("UPDATE questions SET has_accepted_answer = 1 WHERE id = ?");
-            $updateQuestionStmt->bind_param("i", $questionId);
-            $updateQuestionStmt->execute();
+            $updateQuestionStmt = prepareStatement($conn, "UPDATE questions SET has_accepted_answer = 1 WHERE id = ?");
+            if ($updateQuestionStmt) {
+                $updateQuestionStmt->bind_param("i", $questionId);
+                $updateQuestionStmt->execute();
+            }
             
             // Fetch the updated answer with user info
-            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
-                                         JOIN users u ON a.user_id = u.id 
-                                         WHERE a.id = ?");
-            $fetchStmt->bind_param("i", $answerId);
-            $fetchStmt->execute();
-            $answerResult = $fetchStmt->get_result();
-            $updatedAnswer = $answerResult->fetch_assoc();
+            $updatedAnswer = fetchEntityWithUser($conn, "answers", $answerId);
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Answer marked as accepted",
                 "answer" => $updatedAnswer
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Failed to accept answer"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Failed to accept answer"]);
         }
-        
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
         ]);
@@ -1104,12 +808,7 @@ function acceptAnswer($conn, $data) {
 function getAnswers($conn) {
     // Check if question ID is provided
     if (!isset($_GET['questionId'])) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Question ID is required"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
         return;
     }
     
@@ -1117,12 +816,15 @@ function getAnswers($conn) {
     
     try {
         // Fetch answers with user information
-        // Updated to order by is_accepted first (accepted answers come first)
-        $stmt = $conn->prepare("SELECT a.*, u.email as user_email 
-                               FROM answers a 
-                               JOIN users u ON a.user_id = u.id 
-                               WHERE a.question_id = ? 
-                               ORDER BY a.is_accepted DESC, a.created_at ASC");
+        $stmt = prepareStatement($conn, 
+            "SELECT a.*, u.email as user_email 
+             FROM answers a 
+             JOIN users u ON a.user_id = u.id 
+             WHERE a.question_id = ? 
+             ORDER BY a.is_accepted DESC, a.created_at ASC"
+        );
+        
+        if (!$stmt) return;
         
         $stmt->bind_param("i", $questionId);
         $stmt->execute();
@@ -1136,18 +838,13 @@ function getAnswers($conn) {
             $count++;
         }
         
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => true,
             "count" => $count,
             "answers" => $answers
         ]);
-        
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error retrieving answers: " . $e->getMessage()
         ]);
@@ -1161,12 +858,7 @@ function addComment($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->userId) || !isset($data->answerId) || 
         !isset($data->body) || empty(trim($data->body))) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -1177,32 +869,21 @@ function addComment($conn, $data) {
 
     try {
         // Verify that the answer exists
-        $checkStmt = $conn->prepare("SELECT id FROM answers WHERE id = ?");
+        $checkStmt = prepareStatement($conn, "SELECT id FROM answers WHERE id = ?");
+        if (!$checkStmt) return;
+        
         $checkStmt->bind_param("i", $answerId);
         $checkStmt->execute();
         $result = $checkStmt->get_result();
         
         if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Answer not found"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Answer not found"]);
             return;
         }
 
         // Insert the comment
-        $stmt = $conn->prepare("INSERT INTO comments (user_id, answer_id, body) VALUES (?, ?, ?)");
-        if (!$stmt) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Database error"
-            ]);
-            return;
-        }
+        $stmt = prepareStatement($conn, "INSERT INTO comments (user_id, answer_id, body) VALUES (?, ?, ?)");
+        if (!$stmt) return;
         
         $stmt->bind_param("iis", $userId, $answerId, $body);
         
@@ -1210,33 +891,18 @@ function addComment($conn, $data) {
             $commentId = $stmt->insert_id;
             
             // Fetch the created comment with user info
-            $fetchStmt = $conn->prepare("SELECT c.*, u.email as user_email FROM comments c
-                                        JOIN users u ON c.user_id = u.id
-                                        WHERE c.id = ?");
-            $fetchStmt->bind_param("i", $commentId);
-            $fetchStmt->execute();
-            $result = $fetchStmt->get_result();
-            $comment = $result->fetch_assoc();
+            $comment = fetchEntityWithUser($conn, "comments", $commentId);
             
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
+            sendJsonResponse([
                 "success" => true, 
                 "message" => "Comment added successfully",
                 "comment" => $comment
             ]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Error adding comment"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Error adding comment"]);
         }
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
         ]);
@@ -1250,12 +916,7 @@ function addComment($conn, $data) {
 function deleteComment($conn, $data) {
     // Check if required parameters are provided
     if (!isset($data->commentId) || !isset($data->userId)) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Missing required parameters"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
         return;
     }
 
@@ -1264,58 +925,24 @@ function deleteComment($conn, $data) {
     $userId = intval($data->userId);
 
     try {
-        // Check if the user is the comment author
-        $checkStmt = $conn->prepare("SELECT user_id FROM comments WHERE id = ?");
-        $checkStmt->bind_param("i", $commentId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-        
-        if ($result->num_rows === 0) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Comment not found"
-            ]);
-            return;
-        }
-        
-        $comment = $result->fetch_assoc();
-        
         // Verify ownership
-        if (intval($comment['user_id']) !== $userId) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "You can only delete your own comments"
-            ]);
+        if (!verifyOwnership($conn, "comments", $commentId, $userId, "Comment not found", "You can only delete your own comments")) {
             return;
         }
 
         // Delete the comment
-        $deleteStmt = $conn->prepare("DELETE FROM comments WHERE id = ?");
+        $deleteStmt = prepareStatement($conn, "DELETE FROM comments WHERE id = ?");
+        if (!$deleteStmt) return;
+        
         $deleteStmt->bind_param("i", $commentId);
         
         if ($deleteStmt->execute()) {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => true, 
-                "message" => "Comment deleted successfully"
-            ]);
+            sendJsonResponse(["success" => true, "message" => "Comment deleted successfully"]);
         } else {
-            // Clear any output before sending JSON
-            ob_clean();
-            echo json_encode([
-                "success" => false, 
-                "message" => "Error deleting comment"
-            ]);
+            sendJsonResponse(["success" => false, "message" => "Error deleting comment"]);
         }
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
         ]);
@@ -1328,12 +955,7 @@ function deleteComment($conn, $data) {
 function getComments($conn) {
     // Check if answer ID is provided
     if (!isset($_GET['answerId'])) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
-            "success" => false, 
-            "message" => "Answer ID is required"
-        ]);
+        sendJsonResponse(["success" => false, "message" => "Answer ID is required"]);
         return;
     }
     
@@ -1341,11 +963,15 @@ function getComments($conn) {
     
     try {
         // Fetch comments with user information
-        $stmt = $conn->prepare("SELECT c.*, u.email as user_email 
-                               FROM comments c
-                               JOIN users u ON c.user_id = u.id
-                               WHERE c.answer_id = ? 
-                               ORDER BY c.created_at ASC");
+        $stmt = prepareStatement($conn,
+            "SELECT c.*, u.email as user_email 
+             FROM comments c
+             JOIN users u ON c.user_id = u.id
+             WHERE c.answer_id = ? 
+             ORDER BY c.created_at ASC"
+        );
+        
+        if (!$stmt) return;
         
         $stmt->bind_param("i", $answerId);
         $stmt->execute();
@@ -1359,18 +985,13 @@ function getComments($conn) {
             $count++;
         }
         
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => true,
             "count" => $count,
             "comments" => $comments
         ]);
-        
     } catch (Exception $e) {
-        // Clear any output before sending JSON
-        ob_clean();
-        echo json_encode([
+        sendJsonResponse([
             "success" => false, 
             "message" => "Error retrieving comments: " . $e->getMessage()
         ]);
