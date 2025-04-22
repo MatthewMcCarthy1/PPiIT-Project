@@ -291,6 +291,21 @@
   color: #718096;
 }
 
+/* Answer form heading */
+.answer-form-heading {
+  font-size: 18px;
+  margin: 0 0 15px;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.answer-form-heading i {
+  color: #ff4b2b;
+  font-size: 14px;
+}
+
 /* Answer form styles */
 .answer-form {
   margin-top: 25px;
@@ -298,6 +313,11 @@
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.answer-input-wrapper {
+  position: relative;
+  margin-bottom: 15px;
 }
 
 .answer-input {
@@ -309,14 +329,47 @@
   resize: vertical;
   font-family: inherit;
   font-size: 14px;
-  margin-bottom: 15px;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease-in-out;
+}
+
+.answer-input-wrapper.focused {
+  box-shadow: 0 0 0 3px rgba(255, 75, 43, 0.1);
 }
 
 .answer-input:focus {
   outline: none;
   border-color: #ff4b2b;
-  box-shadow: 0 0 0 2px rgba(255, 75, 43, 0.1);
+}
+
+/* Input overlay for submitting state */
+.input-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  z-index: 5;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.overlay-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 75, 43, 0.1);
+  border-radius: 50%;
+  border-top-color: #ff4b2b;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.form-submitting .answer-input {
+  opacity: 0.6;
 }
 
 .answer-form-actions {
@@ -328,6 +381,22 @@
 .answer-char-count {
   color: #718096;
   font-size: 12px;
+  transition: color 0.3s ease;
+}
+
+.answer-char-count.char-count-warning {
+  color: #dd6b20;
+  font-weight: bold;
+}
+
+.answer-char-count.char-count-danger {
+  color: #e53e3e;
+  font-weight: bold;
+}
+
+.answer-buttons {
+  display: flex;
+  gap: 10px;
 }
 
 .post-answer-btn {
@@ -342,11 +411,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .post-answer-btn:hover:not(:disabled) {
   background-color: #e53319;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+.post-answer-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .post-answer-btn:disabled {
@@ -354,8 +429,45 @@
   cursor: not-allowed;
 }
 
-.post-answer-btn i {
-  font-size: 12px;
+.cancel-answer-btn {
+  background-color: transparent;
+  border: 1px solid #cbd5e0;
+  color: #4a5568;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.cancel-answer-btn:hover {
+  background-color: #f7fafc;
+  border-color: #a0aec0;
+}
+
+/* Login prompt */
+.login-prompt {
+  background-color: #ebf8ff;
+  color: #3182ce;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Answer highlight animation */
+.highlight-answer {
+  animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+  0% { background-color: white; }
+  20% { background-color: #fff0ee; }
+  80% { background-color: #fff0ee; }
+  100% { background-color: white; }
 }
 
 /* Submission status message */
@@ -369,18 +481,16 @@
   animation: fadeIn 0.3s ease-in;
 }
 
-.answer-submission-status i {
-  font-size: 16px;
-}
-
 .answer-submission-status.success {
   background-color: #d4edda;
   color: #155724;
+  border-left: 4px solid #28a745;
 }
 
 .answer-submission-status.error {
   background-color: #f8d7da;
   color: #721c24;
+  border-left: 4px solid #dc3545;
 }
 
 @media (max-width: 768px) {
@@ -402,11 +512,18 @@
   
   .answer-form-actions {
     flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
+    gap: 15px;
+    align-items: stretch;
   }
   
-  .post-answer-btn {
+  .answer-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  
+  .post-answer-btn,
+  .cancel-answer-btn {
     width: 100%;
     justify-content: center;
   }
