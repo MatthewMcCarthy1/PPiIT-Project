@@ -170,7 +170,7 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
         {/* Question stats section */}
         <div className="question-stats">
           <div className="stat-item">
-            <i className="far fa-comment-alt"></i>
+            <i className={`${parseInt(question.has_accepted_answer) === 1 ? 'fas fa-check-circle accepted-indicator' : 'far fa-comment-alt'}`}></i>
             <span>{question.answer_count || 0} answers</span>
           </div>
           <div className="stat-item">
