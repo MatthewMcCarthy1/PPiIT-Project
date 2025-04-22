@@ -91,6 +91,9 @@ try {
             case 'submitAnswer':
                 submitAnswer($conn, $data);
                 break;
+            case 'deleteAnswer':
+                deleteAnswer($conn, $data);
+                break;
             case 'incrementViewCount':
                 incrementViewCount($conn, $data);
                 break;
@@ -567,6 +570,114 @@ function submitAnswer($conn, $data) {
         echo json_encode([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Delete an answer from the database
+ * Ensures only the owner can delete their own answers
+ */
+function deleteAnswer($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->answerId) || !isset($data->userId)) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $answerId = intval($data->answerId);
+    $userId = intval($data->userId);
+
+    try {
+        // First check if the user is the owner of this answer
+        $checkStmt = $conn->prepare("SELECT user_id, question_id FROM answers WHERE id = ?");
+        if (!$checkStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+
+        $checkStmt->bind_param("i", $answerId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+
+        // If answer doesn't exist
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Answer not found"
+            ]);
+            return;
+        }
+
+        // Check if user is the owner
+        $answer = $result->fetch_assoc();
+        $questionId = $answer['question_id'];
+        
+        if (intval($answer['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "You can only delete your own answers"
+            ]);
+            return;
+        }
+
+        // User is authorized, proceed with deletion
+        $deleteStmt = $conn->prepare("DELETE FROM answers WHERE id = ?");
+        if (!$deleteStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error during deletion"
+            ]);
+            return;
+        }
+
+        $deleteStmt->bind_param("i", $answerId);
+        
+        if ($deleteStmt->execute()) {
+            // Decrement the answer count for the question
+            $updateStmt = $conn->prepare("UPDATE questions SET answer_count = GREATEST(answer_count - 1, 0) WHERE id = ?");
+            $updateStmt->bind_param("i", $questionId);
+            $updateStmt->execute();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Answer successfully deleted"
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to delete answer"
+            ]);
+        }
+        
+        $deleteStmt->close();
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing delete request: " . $e->getMessage()
         ]);
     }
 }
