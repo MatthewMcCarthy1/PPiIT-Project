@@ -5,19 +5,20 @@ import "./questions-css/Questions.css";
 /**
  * Questions Component
  * 
- * Responsible for displaying a list of questions fetched from the backend.
- * Handles three states: loading, error, and displaying questions.
+ * Displays a list of questions with different views (recent, my questions, bookmarks)
+ * and states (loading, error, empty, and populated). Handles search results and
+ * empty state messaging customized to the current view.
  * 
- * @param {Array} questions - Array of question objects to display
- * @param {number} allQuestionsCount - Total number of questions available
+ * @param {Array} questions - Array of question objects to display in the current view
+ * @param {number} allQuestionsCount - Total number of questions available in the system
  * @param {boolean} isLoading - Flag indicating if questions are currently being fetched
  * @param {string} error - Error message if question fetching failed
- * @param {string} searchQuery - Search query string
- * @param {string} searchInput - User input for search
- * @param {string} activeView - Current active view
- * @param {object} currentUser - Current logged-in user
- * @param {function} onQuestionDeleted - Handler for question deletion
- * @param {function} onQuestionView - Handler for question view
+ * @param {string} searchQuery - Current active search query string (processed)
+ * @param {string} searchInput - Raw user input for search (for display purposes)
+ * @param {string} activeView - Current active view ('recent', 'myquestions', 'bookmarks')
+ * @param {object} currentUser - Current logged-in user object or null if not logged in
+ * @param {function} onQuestionDeleted - Callback function when a question is deleted
+ * @param {function} onQuestionView - Callback function when a question is selected for viewing
  * @returns {JSX.Element} - Rendered component
  */
 function Questions({ 
@@ -105,7 +106,10 @@ function Questions({
     );
   }
 
-  // Render header text based on active view
+  /**
+   * Determine the appropriate header text based on the current view
+   * This helps users understand what they're looking at
+   */
   let headerText = "Recent Questions";
   if (activeView === "myquestions") {
     headerText = "My Questions";
@@ -115,13 +119,20 @@ function Questions({
     headerText = "Search Results";
   }
 
-  // Render list of questions when available
+  /**
+   * Main render output when questions are available
+   * Displays a header with the view name and question count,
+   * followed by the list of individual question items
+   */
   return (
     <div className="questions-container">
+      {/* Header showing the current view type and question count */}
       <h2 className="questions-header">
         <i className="fas fa-list-alt"></i> {headerText}
         <span className="questions-count">{questions.length}</span>
       </h2>
+      
+      {/* List of questions rendered as QuestionItem components */}
       <div className="questions-list">
         {questions.map((question) => (
           <QuestionItem 
