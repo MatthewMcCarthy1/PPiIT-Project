@@ -6,8 +6,12 @@ ob_start();
 error_reporting(E_ERROR | E_PARSE);
 
 /**
- * Helper function for sending consistent JSON responses
- * Cleans output buffer and sends a properly formatted JSON response
+ * Sends a JSON response to the client
+ * 
+ * Cleans the output buffer and encodes the provided data as JSON
+ * 
+ * @param array $data The data to be JSON-encoded and sent
+ * @return void
  */
 function sendJsonResponse($data) {
     ob_clean();
@@ -136,8 +140,17 @@ try {
     ]);
 }
 
+//==============================================================================
+// DATABASE HELPER FUNCTIONS
+//==============================================================================
+
 /**
- * Database helper functions to reduce code duplication
+ * Prepares a SQL statement with error handling
+ * 
+ * @param mysqli $conn Database connection object
+ * @param string $sql SQL query to prepare
+ * @param string $errorMessage Custom error message on failure
+ * @return mysqli_stmt|null Prepared statement or null on failure
  */
 function prepareStatement($conn, $sql, $errorMessage = "Database error") {
     $stmt = $conn->prepare($sql);
@@ -149,7 +162,15 @@ function prepareStatement($conn, $sql, $errorMessage = "Database error") {
 }
 
 /**
- * Verify resource ownership (question, answer, or comment)
+ * Verifies if a user is the owner of a resource
+ * 
+ * @param mysqli $conn Database connection object
+ * @param string $table Table name containing the resource
+ * @param int $id ID of the resource to check
+ * @param int $userId ID of the user to verify ownership against
+ * @param string $notFoundMessage Error message if resource not found
+ * @param string $notOwnerMessage Error message if user is not owner
+ * @return bool True if user is owner, false otherwise
  */
 function verifyOwnership($conn, $table, $id, $userId, $notFoundMessage, $notOwnerMessage) {
     $stmt = prepareStatement($conn, "SELECT user_id FROM $table WHERE id = ?");
@@ -173,6 +194,13 @@ function verifyOwnership($conn, $table, $id, $userId, $notFoundMessage, $notOwne
     return true;
 }
 
+/**
+ * Fetches a question with all its details including user info
+ * 
+ * @param mysqli $conn Database connection object
+ * @param int $questionId ID of the question to fetch
+ * @return array|null Question data with details or null if not found
+ */
 function fetchQuestionWithDetails($conn, $questionId) {
     $stmt = prepareStatement(
         $conn, 
@@ -191,6 +219,14 @@ function fetchQuestionWithDetails($conn, $questionId) {
     return $result->fetch_assoc();
 }
 
+/**
+ * Fetches any entity with its associated user information
+ * 
+ * @param mysqli $conn Database connection object
+ * @param string $table Table name to fetch from (answers, comments)
+ * @param int $id ID of the entity to fetch
+ * @return array|null Entity data with user info or null if not found
+ */
 function fetchEntityWithUser($conn, $table, $id) {
     $stmt = prepareStatement(
         $conn,
@@ -207,7 +243,109 @@ function fetchEntityWithUser($conn, $table, $id) {
     return $result->fetch_assoc();
 }
 
-// Function to get all questions from the database with optional filtering
+//==============================================================================
+// AUTHENTICATION FUNCTIONS
+//==============================================================================
+
+/**
+ * Handles user login functionality
+ *
+ * Validates email format and verifies password against stored hash
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing email and password
+ * @return void Sends JSON response directly
+ */
+function login($conn, $data) {
+    $email = $data->email;
+    $password = $data->password;
+
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
+        return;
+    }
+
+    // Prepare and execute a SQL query to find the user
+    $stmt = $conn->prepare("SELECT id, email, password FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        // Verify the password
+        if (password_verify($password, $user['password'])) {
+            sendJsonResponse(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
+        } else {
+            sendJsonResponse(["success" => false, "message" => "Invalid password"]);
+        }
+    } else {
+        sendJsonResponse(["success" => false, "message" => "User not found"]);
+    }
+}
+
+/**
+ * Registers a new user in the system
+ *
+ * Validates email format and domain (@atu.ie), ensures password meets
+ * minimum length requirements, and creates a new user account
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing email and password
+ * @return void Sends JSON response directly
+ */
+function register($conn, $data) {
+    $email = $data->email;
+    $password = $data->password;
+
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
+        return;
+    }
+
+    // Check if the email ends with @atu.ie
+    if (!preg_match('/@atu\.ie$/', $email)) {
+        sendJsonResponse(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
+        return;
+    }
+
+    // Check if password is minimum 8 characters long
+    if (strlen($password) < 8) {
+        sendJsonResponse(["success" => false, "message" => "Password must be at least 8 characters long"]);
+        return;
+    }
+
+    // Hash the password
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+    // Prepare and execute a SQL query to insert the new user
+    $stmt = $conn->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
+    $stmt->bind_param("ss", $email, $hashed_password);
+
+    if ($stmt->execute()) {
+        $user_id = $conn->insert_id; // Get the ID of the newly created user
+        sendJsonResponse([
+            "success" => true, 
+            "message" => "User registered successfully",
+            "user" => ["id" => $user_id, "email" => $email]
+        ]);
+    } else {
+        sendJsonResponse(["success" => false, "message" => "Error registering user"]);
+    }
+}
+
+//==============================================================================
+// QUESTION MANAGEMENT FUNCTIONS
+//==============================================================================
+
+/**
+ * Fetches questions from the database with optional filtering
+ * 
+ * @param mysqli $conn Database connection object
+ * @return void Sends JSON response directly
+ */
 function getQuestions($conn) {
     // Check for filtering parameters
     $userId = isset($_GET['userId']) ? $_GET['userId'] : null;
@@ -310,79 +448,16 @@ function getQuestions($conn) {
     ]);
 }
 
-// Function to handle user login
-function login($conn, $data) {
-    $email = $data->email;
-    $password = $data->password;
-
-    // Validate email format
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
-        return;
-    }
-
-    // Prepare and execute a SQL query to find the user
-    $stmt = $conn->prepare("SELECT id, email, password FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        // Verify the password
-        if (password_verify($password, $user['password'])) {
-            sendJsonResponse(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
-        } else {
-            sendJsonResponse(["success" => false, "message" => "Invalid password"]);
-        }
-    } else {
-        sendJsonResponse(["success" => false, "message" => "User not found"]);
-    }
-}
-
-// Function to handle user registration
-function register($conn, $data) {
-    $email = $data->email;
-    $password = $data->password;
-
-    // Validate email format
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        sendJsonResponse(["success" => false, "message" => "Invalid email format"]);
-        return;
-    }
-
-    // Check if the email ends with @atu.ie
-    if (!preg_match('/@atu\.ie$/', $email)) {
-        sendJsonResponse(["success" => false, "message" => "Only @atu.ie email addresses are allowed"]);
-        return;
-    }
-
-    // Check if password is minimum 8 characters long
-    if (strlen($password) < 8) {
-        sendJsonResponse(["success" => false, "message" => "Password must be at least 8 characters long"]);
-        return;
-    }
-
-    // Hash the password
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-    // Prepare and execute a SQL query to insert the new user
-    $stmt = $conn->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
-    $stmt->bind_param("ss", $email, $hashed_password);
-
-    if ($stmt->execute()) {
-        $user_id = $conn->insert_id; // Get the ID of the newly created user
-        sendJsonResponse([
-            "success" => true, 
-            "message" => "User registered successfully",
-            "user" => ["id" => $user_id, "email" => $email]
-        ]);
-    } else {
-        sendJsonResponse(["success" => false, "message" => "Error registering user"]);
-    }
-}
-
-// Function to handle question submission from users
+/**
+ * Creates a new question in the database
+ *
+ * Verifies user authentication and validates required fields before
+ * creating the question
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing userId, title, body, and tags
+ * @return void Sends JSON response directly
+ */
 function submitQuestion($conn, $data) {
     // Verify user authentication before allowing question submission
     if (!isset($data->userId) || empty($data->userId)) {
@@ -426,8 +501,13 @@ function submitQuestion($conn, $data) {
 }
 
 /**
- * Update an existing question
- * Ensures only the owner can edit their own questions
+ * Updates an existing question in the database
+ * 
+ * Ensures only the owner can edit their own questions by verifying ownership
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing questionId, userId, title, body, and tags
+ * @return void Sends JSON response directly
  */
 function updateQuestion($conn, $data) {
     // Check if required parameters are provided
@@ -480,8 +560,13 @@ function updateQuestion($conn, $data) {
 }
 
 /**
- * Delete a question from the database
+ * Deletes a question from the database
+ *
  * Ensures only the owner can delete their own questions
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing questionId and userId
+ * @return void Sends JSON response directly
  */
 function deleteQuestion($conn, $data) {
     // Check if required parameters are provided
@@ -522,7 +607,107 @@ function deleteQuestion($conn, $data) {
 }
 
 /**
- * Submit an answer to a question
+ * Increments the view count for a question
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing questionId
+ * @return void Sends JSON response directly
+ */
+function incrementViewCount($conn, $data) {
+    // Check if question ID is provided
+    if (!isset($data->questionId)) {
+        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
+        return;
+    }
+    
+    $questionId = intval($data->questionId);
+    
+    try {
+        // Update view count in the database
+        $stmt = prepareStatement($conn, "UPDATE questions SET views = views + 1 WHERE id = ?");
+        if (!$stmt) return;
+        
+        $stmt->bind_param("i", $questionId);
+        
+        if ($stmt->execute()) {
+            sendJsonResponse(["success" => true, "message" => "View count incremented successfully"]);
+        } else {
+            sendJsonResponse(["success" => false, "message" => "Failed to increment view count"]);
+        }
+    } catch (Exception $e) {
+        sendJsonResponse([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+//==============================================================================
+// ANSWER MANAGEMENT FUNCTIONS
+//==============================================================================
+
+/**
+ * Retrieves answers for a specific question
+ *
+ * Returns answers ordered by acceptance status and creation time
+ *
+ * @param mysqli $conn Database connection object
+ * @return void Sends JSON response directly
+ */
+function getAnswers($conn) {
+    // Check if question ID is provided
+    if (!isset($_GET['questionId'])) {
+        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
+        return;
+    }
+    
+    $questionId = intval($_GET['questionId']);
+    
+    try {
+        // Fetch answers with user information
+        $stmt = prepareStatement($conn, 
+            "SELECT a.*, u.email as user_email 
+             FROM answers a 
+             JOIN users u ON a.user_id = u.id 
+             WHERE a.question_id = ? 
+             ORDER BY a.is_accepted DESC, a.created_at ASC"
+        );
+        
+        if (!$stmt) return;
+        
+        $stmt->bind_param("i", $questionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $answers = [];
+        $count = 0;
+        
+        while ($row = $result->fetch_assoc()) {
+            $answers[] = $row;
+            $count++;
+        }
+        
+        sendJsonResponse([
+            "success" => true,
+            "count" => $count,
+            "answers" => $answers
+        ]);
+    } catch (Exception $e) {
+        sendJsonResponse([
+            "success" => false, 
+            "message" => "Error retrieving answers: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Submits a new answer to a question
+ *
+ * Creates an answer record and updates the answer count for the question
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing questionId, userId, and body
+ * @return void Sends JSON response directly
  */
 function submitAnswer($conn, $data) {
     // Check if required parameters are provided
@@ -581,8 +766,67 @@ function submitAnswer($conn, $data) {
 }
 
 /**
- * Delete an answer from the database
- * Ensures only the owner can delete their own answers
+ * Updates an existing answer
+ *
+ * Ensures only the owner can edit their own answers
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing answerId, userId, and body
+ * @return void Sends JSON response directly
+ */
+function updateAnswer($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->answerId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
+        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $answerId = intval($data->answerId);
+    $userId = intval($data->userId);
+    $body = trim($data->body);
+
+    try {
+        // Verify ownership
+        if (!verifyOwnership($conn, "answers", $answerId, $userId, "Answer not found", "You can only edit your own answers")) {
+            return;
+        }
+
+        // Update the answer
+        $updateStmt = prepareStatement($conn, "UPDATE answers SET body = ? WHERE id = ?");
+        if (!$updateStmt) return;
+
+        $updateStmt->bind_param("si", $body, $answerId);
+        
+        if ($updateStmt->execute()) {
+            // Fetch the updated answer with user info
+            $updatedAnswer = fetchEntityWithUser($conn, "answers", $answerId);
+            
+            sendJsonResponse([
+                "success" => true, 
+                "message" => "Answer successfully updated",
+                "answer" => $updatedAnswer
+            ]);
+        } else {
+            sendJsonResponse(["success" => false, "message" => "Failed to update answer"]);
+        }
+    } catch (Exception $e) {
+        sendJsonResponse([
+            "success" => false, 
+            "message" => "Error processing update request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Deletes an answer from the database
+ *
+ * Ensures only the owner can delete their own answers and updates
+ * the question's answer count
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing answerId and userId
+ * @return void Sends JSON response directly
  */
 function deleteAnswer($conn, $data) {
     // Check if required parameters are provided
@@ -644,88 +888,14 @@ function deleteAnswer($conn, $data) {
 }
 
 /**
- * Update an existing answer
- * Ensures only the owner can edit their own answers
- */
-function updateAnswer($conn, $data) {
-    // Check if required parameters are provided
-    if (!isset($data->answerId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
-        sendJsonResponse(["success" => false, "message" => "Missing required parameters"]);
-        return;
-    }
-
-    // Convert parameters to integers to ensure type safety
-    $answerId = intval($data->answerId);
-    $userId = intval($data->userId);
-    $body = trim($data->body);
-
-    try {
-        // Verify ownership
-        if (!verifyOwnership($conn, "answers", $answerId, $userId, "Answer not found", "You can only edit your own answers")) {
-            return;
-        }
-
-        // Update the answer
-        $updateStmt = prepareStatement($conn, "UPDATE answers SET body = ? WHERE id = ?");
-        if (!$updateStmt) return;
-
-        $updateStmt->bind_param("si", $body, $answerId);
-        
-        if ($updateStmt->execute()) {
-            // Fetch the updated answer with user info
-            $updatedAnswer = fetchEntityWithUser($conn, "answers", $answerId);
-            
-            sendJsonResponse([
-                "success" => true, 
-                "message" => "Answer successfully updated",
-                "answer" => $updatedAnswer
-            ]);
-        } else {
-            sendJsonResponse(["success" => false, "message" => "Failed to update answer"]);
-        }
-    } catch (Exception $e) {
-        sendJsonResponse([
-            "success" => false, 
-            "message" => "Error processing update request: " . $e->getMessage()
-        ]);
-    }
-}
-
-/**
- * Increment view count for a question
- */
-function incrementViewCount($conn, $data) {
-    // Check if question ID is provided
-    if (!isset($data->questionId)) {
-        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
-        return;
-    }
-    
-    $questionId = intval($data->questionId);
-    
-    try {
-        // Update view count in the database
-        $stmt = prepareStatement($conn, "UPDATE questions SET views = views + 1 WHERE id = ?");
-        if (!$stmt) return;
-        
-        $stmt->bind_param("i", $questionId);
-        
-        if ($stmt->execute()) {
-            sendJsonResponse(["success" => true, "message" => "View count incremented successfully"]);
-        } else {
-            sendJsonResponse(["success" => false, "message" => "Failed to increment view count"]);
-        }
-    } catch (Exception $e) {
-        sendJsonResponse([
-            "success" => false, 
-            "message" => "Error processing request: " . $e->getMessage()
-        ]);
-    }
-}
-
-/**
- * Mark an answer as accepted
- * Only the question owner can mark answers as accepted
+ * Marks an answer as accepted
+ *
+ * Only the original question owner can mark an answer as accepted.
+ * Unmarks any previously accepted answer for the same question.
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing answerId and userId
+ * @return void Sends JSON response directly
  */
 function acceptAnswer($conn, $data) {
     // Check if required parameters are provided
@@ -802,57 +972,71 @@ function acceptAnswer($conn, $data) {
     }
 }
 
+//==============================================================================
+// COMMENT MANAGEMENT FUNCTIONS
+//==============================================================================
+
 /**
- * Get answers for a specific question
+ * Retrieves comments for a specific answer
+ * 
+ * Fetches all comments for the given answer ID, including the username
+ * of the commenter, ordered by creation time.
+ * 
+ * @param mysqli $conn Database connection object
+ * @return void Sends JSON response directly
  */
-function getAnswers($conn) {
-    // Check if question ID is provided
-    if (!isset($_GET['questionId'])) {
-        sendJsonResponse(["success" => false, "message" => "Question ID is required"]);
+function getComments($conn) {
+    // Check if answer ID is provided
+    if (!isset($_GET['answerId'])) {
+        sendJsonResponse(["success" => false, "message" => "Answer ID is required"]);
         return;
     }
     
-    $questionId = intval($_GET['questionId']);
+    $answerId = intval($_GET['answerId']);
     
     try {
-        // Fetch answers with user information
-        $stmt = prepareStatement($conn, 
-            "SELECT a.*, u.email as user_email 
-             FROM answers a 
-             JOIN users u ON a.user_id = u.id 
-             WHERE a.question_id = ? 
-             ORDER BY a.is_accepted DESC, a.created_at ASC"
+        // Fetch comments with user information
+        $stmt = prepareStatement($conn,
+            "SELECT c.*, u.email as user_email 
+             FROM comments c
+             JOIN users u ON c.user_id = u.id
+             WHERE c.answer_id = ? 
+             ORDER BY c.created_at ASC"
         );
         
         if (!$stmt) return;
         
-        $stmt->bind_param("i", $questionId);
+        $stmt->bind_param("i", $answerId);
         $stmt->execute();
         $result = $stmt->get_result();
         
-        $answers = [];
+        $comments = [];
         $count = 0;
         
         while ($row = $result->fetch_assoc()) {
-            $answers[] = $row;
+            $comments[] = $row;
             $count++;
         }
         
         sendJsonResponse([
             "success" => true,
             "count" => $count,
-            "answers" => $answers
+            "comments" => $comments
         ]);
     } catch (Exception $e) {
         sendJsonResponse([
             "success" => false, 
-            "message" => "Error retrieving answers: " . $e->getMessage()
+            "message" => "Error retrieving comments: " . $e->getMessage()
         ]);
     }
 }
 
 /**
- * Add a comment to an answer
+ * Adds a comment to an answer
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing userId, answerId, and body
+ * @return void Sends JSON response directly
  */
 function addComment($conn, $data) {
     // Check if required parameters are provided
@@ -910,8 +1094,13 @@ function addComment($conn, $data) {
 }
 
 /**
- * Delete a comment
- * Only the author can delete their own comments
+ * Deletes a comment from the database
+ *
+ * Ensures only the author can delete their own comments
+ *
+ * @param mysqli $conn Database connection object
+ * @param object $data Request data containing commentId and userId
+ * @return void Sends JSON response directly
  */
 function deleteComment($conn, $data) {
     // Check if required parameters are provided
@@ -945,55 +1134,6 @@ function deleteComment($conn, $data) {
         sendJsonResponse([
             "success" => false, 
             "message" => "Error processing request: " . $e->getMessage()
-        ]);
-    }
-}
-
-/**
- * Get comments for a specific answer
- */
-function getComments($conn) {
-    // Check if answer ID is provided
-    if (!isset($_GET['answerId'])) {
-        sendJsonResponse(["success" => false, "message" => "Answer ID is required"]);
-        return;
-    }
-    
-    $answerId = intval($_GET['answerId']);
-    
-    try {
-        // Fetch comments with user information
-        $stmt = prepareStatement($conn,
-            "SELECT c.*, u.email as user_email 
-             FROM comments c
-             JOIN users u ON c.user_id = u.id
-             WHERE c.answer_id = ? 
-             ORDER BY c.created_at ASC"
-        );
-        
-        if (!$stmt) return;
-        
-        $stmt->bind_param("i", $answerId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $comments = [];
-        $count = 0;
-        
-        while ($row = $result->fetch_assoc()) {
-            $comments[] = $row;
-            $count++;
-        }
-        
-        sendJsonResponse([
-            "success" => true,
-            "count" => $count,
-            "comments" => $comments
-        ]);
-    } catch (Exception $e) {
-        sendJsonResponse([
-            "success" => false, 
-            "message" => "Error retrieving comments: " . $e->getMessage()
         ]);
     }
 }
