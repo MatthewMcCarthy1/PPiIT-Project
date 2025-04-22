@@ -4,27 +4,31 @@ import "./questions-css/QuestionModal.css";
 /**
  * QuestionModal Component
  * 
- * A modal dialog for creating and submitting new questions.
- * Handles form input, validation, and submission states.
+ * A modal dialog for creating and submitting new questions to the forum.
+ * Provides form inputs for question title, body content, and tags.
+ * Manages form state, validation, submission process, and feedback display.
  * 
- * @param {boolean} isOpen - Whether the modal is visible
- * @param {function} onClose - Function to call when closing the modal
- * @param {function} onSubmit - Function to handle form submission
- * @param {Object} submissionStatus - Status of the form submission (success/error)
- * @returns {JSX.Element|null} - Rendered component or null if closed
+ * @param {boolean} isOpen - Controls whether the modal is visible or hidden
+ * @param {function} onClose - Handler to close the modal (cancellation or after submission)
+ * @param {function} onSubmit - Handler to process the submitted question data
+ * @param {Object} submissionStatus - Object containing submission feedback {type: 'success'|'error', message: string}
+ * @returns {JSX.Element|null} - Rendered component or null if modal is closed
  */
 function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
-  // State for form field values
+  // Form field values for the question being created
   const [questionData, setQuestionData] = useState({
     title: "",
     body: "",
     tags: ""
   });
   
-  // State to track if form is currently being submitted
+  // Controls UI elements during submission (disables inputs, changes button text)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form fields when modal is opened
+  /**
+   * Reset form fields when the modal is opened
+   * Prevents old data from appearing in a new question form
+   */
   useEffect(() => {
     if (isOpen) {
       setQuestionData({ title: "", body: "", tags: "" });
@@ -33,9 +37,10 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
   }, [isOpen]);
 
   /**
-   * Updates form state when input fields change
+   * Updates the question form data when input fields change
+   * Uses the field name attribute to determine which property to update
    * 
-   * @param {Event} e - Input change event
+   * @param {Event} e - Input change event from any form field
    */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -46,7 +51,8 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
   };
 
   /**
-   * Handles form submission
+   * Processes the form submission
+   * Prevents default form behavior, sets submission state, and calls the parent handler
    * 
    * @param {Event} e - Form submission event
    */
@@ -73,16 +79,16 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
           <button className="close-button" onClick={onClose}>×</button>
         </div>
         
-        {/* Display submission status message if available */}
+        {/* Status message area - shows success or error messages from submission attempt */}
         {submissionStatus && (
           <div className={`submission-status ${submissionStatus.type}`}>
             {submissionStatus.message}
           </div>
         )}
         
-        {/* Question submission form */}
+        {/* Question input form with title, body, and tags fields */}
         <form onSubmit={handleQuestionSubmit}>
-          {/* Question title field */}
+          {/* Title input - Short, descriptive question summary */}
           <div className="form-group">
             <label htmlFor="title">Title</label>
             <input
@@ -98,7 +104,7 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
             />
           </div>
           
-          {/* Question body/description field */}
+          {/* Body input - Detailed question description with context */}
           <div className="form-group">
             <label htmlFor="body">Body</label>
             <textarea
@@ -114,7 +120,7 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
             ></textarea>
           </div>
           
-          {/* Question tags field */}
+          {/* Tags input - Comma-separated list of relevant keywords */}
           <div className="form-group">
             <label htmlFor="tags">Tags</label>
             <input
@@ -128,7 +134,7 @@ function QuestionModal({ isOpen, onClose, onSubmit, submissionStatus }) {
             />
           </div>
           
-          {/* Form action buttons */}
+          {/* Form action buttons for submission or cancellation */}
           <div className="form-actions">
             <button 
               type="button" 
