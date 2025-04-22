@@ -10,6 +10,7 @@ UniStack is a community-driven Q&A platform tailored for ATU students, inspired 
 - Deployment: Docker
 
 ## Project Structure
+```plaintext
 project/
 ├── apache.conf                  # Apache server configuration
 ├── dev.sh                       # Development script
@@ -26,6 +27,7 @@ project/
         │   ├── home/            # Home page components
         │   └── questions/       # Question-related components
         └── ...
+```
 
 ## Features
 - User authentication (login/register)
