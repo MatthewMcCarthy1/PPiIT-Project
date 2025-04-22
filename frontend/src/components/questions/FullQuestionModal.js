@@ -3,7 +3,15 @@ import "./questions-css/FullQuestionModal.css";
 import CommentSection from './CommentSection';
 
 /**
- * Modal to display the full question details
+ * ============================================================================
+ * FULL QUESTION MODAL COMPONENT
+ * ============================================================================
+ * This component displays a detailed view of a question, including:
+ * - Question details (title, body, tags)
+ * - Question editing functionality (for question authors)
+ * - Answer listing, submission, editing and deletion
+ * - Answer acceptance (for question authors)
+ * - Comment sections for each answer
  * 
  * @param {boolean} isOpen - Whether the modal is visible
  * @param {function} onClose - Function to call when closing the modal
@@ -12,29 +20,33 @@ import CommentSection from './CommentSection';
  * @param {function} onQuestionUpdated - Function to call when the question is updated
  */
 function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionUpdated }) {
-  // State for the answer input
+  //============================================================================
+  // STATE MANAGEMENT
+  //============================================================================
+  
+  // Answer Input State
   const [answerBody, setAnswerBody] = useState("");
   
-  // State for answers data
+  // Answers Data State
   const [answers, setAnswers] = useState([]);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
   const [answerError, setAnswerError] = useState(null);
   
-  // State for answer submission
+  // Answer Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState(null);
 
-  // State for answer deletion
+  // Answer Deletion State
   const [isDeleting, setIsDeleting] = useState(false);
   const [answerToDelete, setAnswerToDelete] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // State for answer editing
+  // Answer Editing State
   const [editingAnswerId, setEditingAnswerId] = useState(null);
   const [editAnswerBody, setEditAnswerBody] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // State for question editing
+  // Question Editing State
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editQuestionData, setEditQuestionData] = useState({
     title: '',
@@ -43,13 +55,20 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   });
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
 
-  // State for answer acceptance
+  // Answer Acceptance State
   const [isAccepting, setIsAccepting] = useState(false);
 
-  const newAnswerRef = useRef(null);
-  const answerInputRef = useRef(null);
+  // References
+  const newAnswerRef = useRef(null); // Reference to newly added answer for scrolling
+  const answerInputRef = useRef(null); // Reference to answer input field for styling
 
-  // Fetch answers when question changes
+  //============================================================================
+  // LIFECYCLE EFFECTS
+  //============================================================================
+  
+  /**
+   * Effect to fetch answers and increment view count when the question is viewed
+   */
   useEffect(() => {
     if (isOpen && question) {
       fetchAnswers();
@@ -63,10 +82,16 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     }
   }, [isOpen, question]);
 
+  // Early return if modal is not open or no question is provided
   if (!isOpen || !question) return null;
 
+  //============================================================================
+  // API INTERACTION FUNCTIONS
+  //============================================================================
+  
   /**
-   * Increment view count for the question
+   * Increments the view count for the question in the backend
+   * This is a background operation that doesn't need to block the UI
    */
   const incrementViewCount = async () => {
     try {
@@ -93,7 +118,8 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Fetch answers for the current question
+   * Fetches all answers for the current question from the backend
+   * Updates the answers state array on success
    */
   const fetchAnswers = async () => {
     setIsLoadingAnswers(true);
@@ -123,13 +149,23 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     }
   };
 
+  //============================================================================
+  // ANSWER MANAGEMENT FUNCTIONS
+  //============================================================================
+  
   /**
-   * Handle answer submission
+   * Handles the submission of a new answer
+   * - Validates the input
+   * - Sends the answer to the backend
+   * - Updates UI on success/failure
+   * - Scrolls to the new answer
+   * 
+   * @param {Event} e - Form submission event
    */
   const handleAnswerSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate answer
+    // Validate answer - prevent empty submissions
     if (!answerBody.trim()) {
       setSubmissionStatus({
         type: 'error',
@@ -163,7 +199,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
       const data = await response.json();
       
       if (data.success) {
-        // Add the new answer to the list
+        // Add the new answer to the beginning of the list
         setAnswers(prevAnswers => [data.answer, ...prevAnswers]);
         
         // Clear the input and show success message
@@ -173,7 +209,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
           message: 'Answer posted successfully!'
         });
         
-        // Scroll to the new answer with animation
+        // Scroll to the new answer with animation and highlight it
         setTimeout(() => {
           if (newAnswerRef.current) {
             newAnswerRef.current.scrollIntoView({ 
@@ -212,16 +248,19 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Handle answer deletion
+   * Initiates the answer deletion process
+   * Shows a confirmation modal before proceeding with deletion
+   * 
+   * @param {Object} answer - The answer object to delete
    */
   const handleDeleteClick = (answer) => {
-    // Show delete confirmation modal
+    // Store the answer to delete and show confirmation modal
     setAnswerToDelete(answer);
     setShowDeleteModal(true);
   };
 
   /**
-   * Close delete confirmation modal
+   * Closes the delete confirmation modal and resets state
    */
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
@@ -229,7 +268,8 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Confirm deletion of an answer
+   * Confirms and executes the answer deletion after user confirmation
+   * Removes the deleted answer from the answers array on success
    */
   const confirmDeleteAnswer = async () => {
     if (!answerToDelete) return;
@@ -271,7 +311,10 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Handle answer edit button click
+   * Initiates the answer editing process
+   * Sets the answer ID being edited and populates the edit form
+   * 
+   * @param {Object} answer - The answer object to edit
    */
   const handleEditClick = (answer) => {
     setEditingAnswerId(answer.id);
@@ -279,7 +322,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Cancel editing answer
+   * Cancels the answer editing process and resets state
    */
   const cancelEditAnswer = () => {
     setEditingAnswerId(null);
@@ -287,7 +330,10 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Submit edited answer
+   * Submits an edited answer to the backend
+   * Updates the answer in the answers array on success
+   * 
+   * @param {number} answerId - ID of the answer being edited
    */
   const submitEditedAnswer = async (answerId) => {
     if (!editAnswerBody.trim()) {
@@ -348,9 +394,14 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Handle accepting an answer
+   * Marks an answer as accepted
+   * Only the question author can accept answers
+   * Updates both the answer status and the question's has_accepted_answer property
+   * 
+   * @param {number} answerId - ID of the answer to mark as accepted
    */
   const handleAcceptAnswer = async (answerId) => {
+    // Only the question owner can accept answers
     if (!currentUser || parseInt(question.user_id) !== parseInt(currentUser.id)) {
       return;
     }
@@ -377,7 +428,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
       const data = await response.json();
       
       if (data.success) {
-        // Update the answer in the list to show as accepted
+        // Update all answers - mark the accepted one and unmark all others
         setAnswers(prevAnswers => 
           prevAnswers.map(a => 
             parseInt(a.id) === parseInt(answerId) 
@@ -412,66 +463,13 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     }
   };
 
+  //============================================================================
+  // QUESTION MANAGEMENT FUNCTIONS
+  //============================================================================
+  
   /**
-   * Handle textarea focus
-   */
-  const handleTextareaFocus = () => {
-    if (answerInputRef.current) {
-      answerInputRef.current.classList.add('focused');
-    }
-  };
-
-  /**
-   * Handle textarea blur
-   */
-  const handleTextareaBlur = () => {
-    if (answerInputRef.current) {
-      answerInputRef.current.classList.remove('focused');
-    }
-  };
-
-  /**
-   * Get character count class based on remaining characters
-   */
-  const getCharCountClass = () => {
-    const length = answerBody.length;
-    if (length > 1800) return 'char-count-warning';
-    if (length > 1950) return 'char-count-danger';
-    return '';
-  };
-
-  /**
-   * Cancel answer submission and clear form
-   */
-  const handleCancelAnswer = () => {
-    setAnswerBody("");
-    setSubmissionStatus(null);
-  };
-
-  /**
-   * Formats a date string into a more readable format
-   */
-  const formatDate = (dateString) => {
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
-  /**
-   * Converts comma-separated tags string into an array of individual tags
-   */
-  const formatTags = (tags) => {
-    if (!tags) return [];
-    return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-  };
-
-  /**
-   * Handle question edit button click
+   * Initiates the question editing process
+   * Populates the form with current question data
    */
   const handleEditQuestionClick = () => {
     setEditQuestionData({
@@ -483,14 +481,16 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Cancel editing question
+   * Cancels question editing and reverts to view mode
    */
   const cancelEditQuestion = () => {
     setIsEditingQuestion(false);
   };
 
   /**
-   * Handle input changes for question edit form
+   * Handles input changes for question edit form fields
+   * 
+   * @param {Event} e - Change event from form inputs
    */
   const handleEditQuestionChange = (e) => {
     const { name, value } = e.target;
@@ -501,7 +501,8 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   };
 
   /**
-   * Submit edited question
+   * Submits the edited question data to the backend
+   * Updates the question in the parent component on success
    */
   const submitEditedQuestion = async () => {
     // Validate inputs
@@ -563,9 +564,85 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     }
   };
 
+  //============================================================================
+  // UI HELPER FUNCTIONS
+  //============================================================================
+  
+  /**
+   * Adds a focused class to the answer input for styling
+   */
+  const handleTextareaFocus = () => {
+    if (answerInputRef.current) {
+      answerInputRef.current.classList.add('focused');
+    }
+  };
+
+  /**
+   * Removes the focused class from the answer input
+   */
+  const handleTextareaBlur = () => {
+    if (answerInputRef.current) {
+      answerInputRef.current.classList.remove('focused');
+    }
+  };
+
+  /**
+   * Returns a CSS class based on remaining characters
+   * Used to visually indicate when approaching character limit
+   * 
+   * @returns {string} - CSS class name
+   */
+  const getCharCountClass = () => {
+    const length = answerBody.length;
+    if (length > 1950) return 'char-count-danger';
+    if (length > 1800) return 'char-count-warning';
+    return '';
+  };
+
+  /**
+   * Cancels answer submission and clears the form
+   */
+  const handleCancelAnswer = () => {
+    setAnswerBody("");
+    setSubmissionStatus(null);
+  };
+
+  /**
+   * Formats a date string into a more readable format
+   * 
+   * @param {string} dateString - The raw date string from the database
+   * @returns {string} - Formatted date string for display
+   */
+  const formatDate = (dateString) => {
+    const options = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  /**
+   * Converts comma-separated tags string into an array of individual tags
+   * 
+   * @param {string} tags - Comma-separated string of tags
+   * @returns {Array} - Array of individual tag strings
+   */
+  const formatTags = (tags) => {
+    if (!tags) return [];
+    return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+  };
+
+  //============================================================================
+  // COMPONENT RENDER
+  //============================================================================
+  
   return (
     <div className="full-question-overlay" onClick={onClose}>
       <div className="full-question-modal" onClick={e => e.stopPropagation()}>
+        {/* Modal Header - Title and Action Buttons */}
         <div className="full-question-header">
           {isEditingQuestion ? (
             <h2>Edit Question</h2>
@@ -588,7 +665,9 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
           </div>
         </div>
         
+        {/* Question Content Section */}
         <div className="full-question-content">
+          {/* Question Edit Form - Visible when editing */}
           {isEditingQuestion ? (
             <div className="question-edit-form">
               <div className="edit-form-group">
@@ -649,6 +728,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
               </div>
             </div>
           ) : (
+            /* Question Body - Visible when not editing */
             <>
               <div className="question-body">
                 {question.body}
@@ -656,7 +736,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </>
           )}
           
-          {/* Author info */}
+          {/* Author Information - Shown beneath question when not editing */}
           {!isEditingQuestion && (
             <div className="full-question-meta">
               <div className="full-question-author">
@@ -671,7 +751,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </div>
           )}
           
-          {/* Tags */}
+          {/* Question Tags - Shown beneath question when not editing */}
           {!isEditingQuestion && (
             <div className="full-question-tags">
               {formatTags(question.tags).length > 0 ? (
@@ -690,12 +770,13 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
           )}
         </div>
         
+        {/* Answers Section */}
         <div className="answers-section">
           <h3 className="answers-header">
             <i className="fas fa-comment-alt"></i> Answers ({answers.length})
           </h3>
           
-          {/* Loading state */}
+          {/* Answer Loading State */}
           {isLoadingAnswers && (
             <div className="answers-loading">
               <div className="answer-spinner"></div>
@@ -703,7 +784,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </div>
           )}
           
-          {/* Error state */}
+          {/* Answer Error State */}
           {answerError && !isLoadingAnswers && (
             <div className="answers-error">
               <i className="fas fa-exclamation-circle"></i>
@@ -711,7 +792,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </div>
           )}
           
-          {/* Empty state */}
+          {/* Empty State - No Answers */}
           {!isLoadingAnswers && !answerError && answers.length === 0 && (
             <div className="no-answers">
               <i className="fas fa-comments"></i>
@@ -719,7 +800,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </div>
           )}
           
-          {/* Answer list */}
+          {/* Answer List - Shows when answers are available */}
           {!isLoadingAnswers && !answerError && answers.length > 0 && (
             <div className="answers-list">
               {answers.map((answer, index) => (
@@ -728,6 +809,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                   className={`answer-item ${parseInt(answer.is_accepted) === 1 ? 'accepted-answer' : ''}`}
                   ref={index === 0 ? newAnswerRef : null}
                 >
+                  {/* Answer Edit Form - Shown when editing this answer */}
                   {editingAnswerId === answer.id ? (
                     <div className="answer-edit-form">
                       <textarea
@@ -758,18 +840,21 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       </div>
                     </div>
                   ) : (
+                    /* Answer Content - Shown when not editing */
                     <>
-                      {/* Show accepted badge if this answer is accepted */}
+                      {/* Accepted Answer Badge */}
                       {parseInt(answer.is_accepted) === 1 && (
                         <div className="accepted-badge">
                           <i className="fas fa-check-circle"></i> Accepted Answer
                         </div>
                       )}
+                      
+                      {/* Answer Body */}
                       <div className="answer-content">
                         {answer.body}
                       </div>
                       
-                      {/* Comment section for answers */}
+                      {/* Comment Section for this Answer */}
                       <CommentSection 
                         answerId={answer.id} 
                         currentUser={currentUser}
@@ -777,6 +862,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                     </>
                   )}
                   
+                  {/* Answer Metadata - Author info and action buttons */}
                   <div className="answer-meta">
                     <div className="answer-author">
                       <div className="user-avatar small">
@@ -790,8 +876,9 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       </div>
                     </div>
                     
+                    {/* Answer Action Buttons */}
                     <div className="answer-actions">
-                      {/* Accept button - visible only to the question owner and if answer is not already accepted */}
+                      {/* Accept Button - Visible only to question author and for non-accepted answers */}
                       {currentUser && 
                        parseInt(question.user_id) === parseInt(currentUser.id) && 
                        editingAnswerId !== answer.id &&
@@ -810,7 +897,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                         </button>
                       )}
                       
-                      {/* Show edit/delete buttons if current user is the answer author */}
+                      {/* Edit/Delete Buttons - Visible to answer author */}
                       {currentUser && parseInt(answer.user_id) === parseInt(currentUser.id) && (
                         <>
                           {editingAnswerId !== answer.id && (
@@ -838,12 +925,13 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
             </div>
           )}
           
-          {/* Answer form */}
+          {/* Answer Submission Form */}
           <div className="answer-form">
             <h4 className="answer-form-heading">
               <i className="fas fa-pen"></i> Your Answer
             </h4>
             
+            {/* Status Messages - Success or Error */}
             {submissionStatus && (
               <div className={`answer-submission-status ${submissionStatus.type}`}>
                 <i className={`fas ${submissionStatus.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
@@ -851,6 +939,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
               </div>
             )}
             
+            {/* Answer Input Form */}
             <form onSubmit={handleAnswerSubmit} className={isSubmitting ? 'form-submitting' : ''}>
               <div className="answer-input-wrapper" ref={answerInputRef}>
                 <textarea 
@@ -865,6 +954,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                   aria-label="Your answer"
                 ></textarea>
                 
+                {/* Submission Overlay - Shown while submitting */}
                 {isSubmitting && (
                   <div className="input-overlay">
                     <div className="overlay-spinner"></div>
@@ -873,11 +963,13 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                 )}
               </div>
               
+              {/* Answer Form Action Bar */}
               <div className="answer-form-actions">
                 <span className={`answer-char-count ${getCharCountClass()}`}>
                   {2000 - answerBody.length} characters remaining
                 </span>
                 <div className="answer-buttons">
+                  {/* Cancel Button - Shown only when there's content to cancel */}
                   {answerBody.trim() && !isSubmitting && (
                     <button 
                       type="button" 
@@ -887,6 +979,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       Cancel
                     </button>
                   )}
+                  {/* Submit Button */}
                   <button 
                     type="submit" 
                     className="post-answer-btn"
@@ -902,6 +995,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
               </div>
             </form>
             
+            {/* Login Prompt - Shown to non-authenticated users */}
             {!currentUser && (
               <div className="login-prompt">
                 <i className="fas fa-info-circle"></i> You need to be logged in to post an answer.
@@ -911,7 +1005,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
         </div>
       </div>
       
-      {/* Delete answer confirmation modal */}
+      {/* Delete Answer Confirmation Modal */}
       {showDeleteModal && (
         <div className="delete-modal-overlay" onClick={closeDeleteModal}>
           <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
