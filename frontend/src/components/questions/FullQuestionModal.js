@@ -42,6 +42,9 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
   });
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
 
+  // State for answer acceptance
+  const [isAccepting, setIsAccepting] = useState(false);
+
   const newAnswerRef = useRef(null);
   const answerInputRef = useRef(null);
 
@@ -340,6 +343,71 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
       alert('Network error. Please try again.');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  /**
+   * Handle accepting an answer
+   */
+  const handleAcceptAnswer = async (answerId) => {
+    if (!currentUser || parseInt(question.user_id) !== parseInt(currentUser.id)) {
+      return;
+    }
+    
+    setIsAccepting(true);
+    
+    try {
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'acceptAnswer',
+          answerId: answerId,
+          userId: currentUser.id
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the answer in the list to show as accepted
+        setAnswers(prevAnswers => 
+          prevAnswers.map(a => 
+            parseInt(a.id) === parseInt(answerId) 
+              ? { ...a, is_accepted: 1 } 
+              : { ...a, is_accepted: 0 } // Make sure other answers are marked as not accepted
+          )
+        );
+        
+        // Show success message
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Answer marked as accepted!'
+        });
+        
+        // Clear success message after some time
+        setTimeout(() => {
+          setSubmissionStatus(null);
+        }, 3000);
+        
+        // Update question to reflect that it has an accepted answer
+        if (onQuestionUpdated && question) {
+          const updatedQuestion = { ...question, has_accepted_answer: 1 };
+          onQuestionUpdated(updatedQuestion);
+        }
+      } else {
+        alert(data.message || 'Failed to accept answer');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    } finally {
+      setIsAccepting(false);
     }
   };
 
@@ -654,7 +722,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
               {answers.map((answer, index) => (
                 <div 
                   key={answer.id} 
-                  className="answer-item"
+                  className={`answer-item ${parseInt(answer.is_accepted) === 1 ? 'accepted-answer' : ''}`}
                   ref={index === 0 ? newAnswerRef : null}
                 >
                   {editingAnswerId === answer.id ? (
@@ -687,9 +755,17 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       </div>
                     </div>
                   ) : (
-                    <div className="answer-content">
-                      {answer.body}
-                    </div>
+                    <>
+                      {/* Show accepted badge if this answer is accepted */}
+                      {parseInt(answer.is_accepted) === 1 && (
+                        <div className="accepted-badge">
+                          <i className="fas fa-check-circle"></i> Accepted Answer
+                        </div>
+                      )}
+                      <div className="answer-content">
+                        {answer.body}
+                      </div>
+                    </>
                   )}
                   
                   <div className="answer-meta">
@@ -705,27 +781,48 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       </div>
                     </div>
                     
-                    {/* Show edit/delete buttons if current user is the answer author */}
-                    {currentUser && parseInt(answer.user_id) === parseInt(currentUser.id) && (
-                      <div className="answer-actions">
-                        {editingAnswerId !== answer.id && (
-                          <button 
-                            className="answer-edit-btn" 
-                            onClick={() => handleEditClick(answer)}
-                            title="Edit this answer"
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-                        )}
+                    <div className="answer-actions">
+                      {/* Accept button - visible only to the question owner and if answer is not already accepted */}
+                      {currentUser && 
+                       parseInt(question.user_id) === parseInt(currentUser.id) && 
+                       editingAnswerId !== answer.id &&
+                       parseInt(answer.is_accepted) !== 1 && (
                         <button 
-                          className="answer-delete-btn" 
-                          onClick={() => handleDeleteClick(answer)}
-                          title="Delete this answer"
+                          className="answer-accept-btn" 
+                          onClick={() => handleAcceptAnswer(answer.id)}
+                          title="Mark as accepted answer"
+                          disabled={isAccepting}
                         >
-                          <i className="fas fa-trash-alt"></i>
+                          {isAccepting ? (
+                            <i className="fas fa-spinner fa-spin"></i>
+                          ) : (
+                            <i className="fas fa-check"></i>
+                          )}
                         </button>
-                      </div>
-                    )}
+                      )}
+                      
+                      {/* Show edit/delete buttons if current user is the answer author */}
+                      {currentUser && parseInt(answer.user_id) === parseInt(currentUser.id) && (
+                        <>
+                          {editingAnswerId !== answer.id && (
+                            <button 
+                              className="answer-edit-btn" 
+                              onClick={() => handleEditClick(answer)}
+                              title="Edit this answer"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          )}
+                          <button 
+                            className="answer-delete-btn" 
+                            onClick={() => handleDeleteClick(answer)}
+                            title="Delete this answer"
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
