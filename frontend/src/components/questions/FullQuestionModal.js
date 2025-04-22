@@ -29,6 +29,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   useEffect(() => {
     if (isOpen && question) {
       fetchAnswers();
+      incrementViewCount();
     }
     
     // Reset states when modal is closed
@@ -39,6 +40,33 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   }, [isOpen, question]);
 
   if (!isOpen || !question) return null;
+
+  /**
+   * Increment view count for the question
+   */
+  const incrementViewCount = async () => {
+    try {
+      // Get the current hostname from the window location
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'incrementViewCount', 
+          questionId: question.id 
+        }),
+      });
+      
+      // We don't need to handle the response as this is a background operation
+    } catch (error) {
+      console.error('Error incrementing view count:', error);
+    }
+  };
 
   /**
    * Fetch answers for the current question
