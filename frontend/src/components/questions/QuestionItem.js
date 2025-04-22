@@ -171,11 +171,11 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
         <div className="question-stats">
           <div className="stat-item">
             <i className="far fa-comment-alt"></i>
-            <span>0 answers</span>
+            <span>{question.answer_count || 0} answers</span>
           </div>
           <div className="stat-item">
             <i className="far fa-eye"></i>
-            <span>0 views</span>
+            <span>{question.views || 0} views</span>
           </div>
           <div className="stat-item view-question">
             <i className="fas fa-external-link-alt"></i>
