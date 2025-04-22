@@ -9,6 +9,24 @@ UniStack is a community-driven Q&A platform tailored for ATU students, inspired 
 - Database: MySQL
 - Deployment: Docker
 
+## Project Structure
+project/
+├── apache.conf                  # Apache server configuration
+├── dev.sh                       # Development script
+├── docker-compose.yml           # Docker configuration
+├── README.md                    # Main documentation
+├── backend/                     # PHP backend
+│   ├── ppiitprojectdb.sql       # Database schema
+│   └── server.php               # Backend server logic
+└── frontend/                    # React frontend application
+    ├── public/                  # Public assets
+    └── src/                     # Source code
+        ├── components/          # React components
+        │   ├── auth/            # Authentication components
+        │   ├── home/            # Home page components
+        │   └── questions/       # Question-related components
+        └── ...
+
 ## Features
 - User authentication (login/register)
 - Question posting and answering
