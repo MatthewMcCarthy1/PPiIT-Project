@@ -46,6 +46,11 @@ try {
                     ob_clean();
                     getAnswers($conn);
                     exit;
+                case 'getComments':
+                    // Clear any output before sending JSON
+                    ob_clean();
+                    getComments($conn);
+                    exit;
                 default:
                     // Clear any output before sending JSON
                     ob_clean();
@@ -105,6 +110,12 @@ try {
                 break;
             case 'acceptAnswer':
                 acceptAnswer($conn, $data);
+                break;
+            case 'addComment':
+                addComment($conn, $data);
+                break;
+            case 'deleteComment':
+                deleteComment($conn, $data);
                 break;
             default:
                 echo json_encode(["success" => false, "message" => "Invalid action"]);
@@ -1139,6 +1150,229 @@ function getAnswers($conn) {
         echo json_encode([
             "success" => false, 
             "message" => "Error retrieving answers: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Add a comment to an answer
+ */
+function addComment($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->userId) || !isset($data->answerId) || 
+        !isset($data->body) || empty(trim($data->body))) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to ensure type safety
+    $userId = intval($data->userId);
+    $answerId = intval($data->answerId);
+    $body = trim($data->body);
+
+    try {
+        // Verify that the answer exists
+        $checkStmt = $conn->prepare("SELECT id FROM answers WHERE id = ?");
+        $checkStmt->bind_param("i", $answerId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Answer not found"
+            ]);
+            return;
+        }
+
+        // Insert the comment
+        $stmt = $conn->prepare("INSERT INTO comments (user_id, answer_id, body) VALUES (?, ?, ?)");
+        if (!$stmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+        
+        $stmt->bind_param("iis", $userId, $answerId, $body);
+        
+        if ($stmt->execute()) {
+            $commentId = $stmt->insert_id;
+            
+            // Fetch the created comment with user info
+            $fetchStmt = $conn->prepare("SELECT c.*, u.email as user_email FROM comments c
+                                        JOIN users u ON c.user_id = u.id
+                                        WHERE c.id = ?");
+            $fetchStmt->bind_param("i", $commentId);
+            $fetchStmt->execute();
+            $result = $fetchStmt->get_result();
+            $comment = $result->fetch_assoc();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Comment added successfully",
+                "comment" => $comment
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Error adding comment"
+            ]);
+        }
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Delete a comment
+ * Only the author can delete their own comments
+ */
+function deleteComment($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->commentId) || !isset($data->userId)) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers for type safety
+    $commentId = intval($data->commentId);
+    $userId = intval($data->userId);
+
+    try {
+        // Check if the user is the comment author
+        $checkStmt = $conn->prepare("SELECT user_id FROM comments WHERE id = ?");
+        $checkStmt->bind_param("i", $commentId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Comment not found"
+            ]);
+            return;
+        }
+        
+        $comment = $result->fetch_assoc();
+        
+        // Verify ownership
+        if (intval($comment['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "You can only delete your own comments"
+            ]);
+            return;
+        }
+
+        // Delete the comment
+        $deleteStmt = $conn->prepare("DELETE FROM comments WHERE id = ?");
+        $deleteStmt->bind_param("i", $commentId);
+        
+        if ($deleteStmt->execute()) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Comment deleted successfully"
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Error deleting comment"
+            ]);
+        }
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Get comments for a specific answer
+ */
+function getComments($conn) {
+    // Check if answer ID is provided
+    if (!isset($_GET['answerId'])) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Answer ID is required"
+        ]);
+        return;
+    }
+    
+    $answerId = intval($_GET['answerId']);
+    
+    try {
+        // Fetch comments with user information
+        $stmt = $conn->prepare("SELECT c.*, u.email as user_email 
+                               FROM comments c
+                               JOIN users u ON c.user_id = u.id
+                               WHERE c.answer_id = ? 
+                               ORDER BY c.created_at ASC");
+        
+        $stmt->bind_param("i", $answerId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $comments = [];
+        $count = 0;
+        
+        while ($row = $result->fetch_assoc()) {
+            $comments[] = $row;
+            $count++;
+        }
+        
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => true,
+            "count" => $count,
+            "comments" => $comments
+        ]);
+        
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error retrieving comments: " . $e->getMessage()
         ]);
     }
 }
