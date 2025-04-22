@@ -1,29 +1,44 @@
 import React, { useState } from "react";
 import "../register/Register.css";
 
+/**
+ * Register Component
+ * Handles new user registration with ATU email validation
+ * 
+ * @param {function} setUser - Function to update user state in parent component upon successful registration
+ * @returns {JSX.Element} Registration form
+ */
 function Register({ setUser }) {
-  // State for form inputs and error message
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // State variables for form management
+  const [email, setEmail] = useState("");       // Stores user's email input (must be @atu.ie)
+  const [password, setPassword] = useState(""); // Stores user's password (min 8 characters)
+  const [error, setError] = useState("");       // Stores validation/error messages
+  const [showPassword, setShowPassword] = useState(false); // Controls password visibility toggle
+  const [isLoading, setIsLoading] = useState(false);       // Tracks registration request status
 
-  // Function to handle form submission
+  /**
+   * Handles the registration form submission
+   * Validates input, sends registration request, and updates app state on success
+   * 
+   * @param {Event} e - Form submission event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true); // Set loading to true when registration starts
+    setIsLoading(true); // Set loading state to show feedback to user
 
-    // Check if the email ends with @atu.ie
+    // Input validation
+    // Email domain validation - ensures institutional email only
     if (!email.endsWith("@atu.ie")) {
       setError("Only @atu.ie email addresses are allowed to register.");
-      setIsLoading(false); // Stop loading if validation fails
+      setIsLoading(false);
       return;
     }
+    
+    // Password strength validation
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
-      setIsLoading(false); // Stop loading if validation fails
+      setIsLoading(false);
       return;
     }
     try {
@@ -57,16 +72,18 @@ function Register({ setUser }) {
   return (
     <form onSubmit={handleSubmit}>
       <h2>Register</h2>
+      {/* Display validation errors or server response messages */}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {isLoading ? (
+        /* Loading indicator shown during registration request processing */
         <div className="loading-spinner">
           Registering account...
           {/* You can replace this text with a spinner icon if desired */}
         </div>
       ) : (
         <>
-          {/* Email input field */}
+          {/* Email input field with institutional domain requirement */}
           <input
             type="email"
             placeholder="Email (@atu.ie)"
@@ -74,7 +91,7 @@ function Register({ setUser }) {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          {/* Password input field */}
+          {/* Password input with visibility toggle */}
           <div className="password-container">
             <input
               type={showPassword ? "text" : "password"}
@@ -83,11 +100,14 @@ function Register({ setUser }) {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            {/* Password visibility toggle button */}
             <i
               className={`fas ${showPassword ? "fa-eye" : "fa-eye-slash"}`}
-              onClick={() => setShowPassword(!showPassword)} // Toggle showPassword state
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
             ></i>
           </div>
+          {/* Form submission button */}
           <button type="submit">Register</button>
         </>
       )}
