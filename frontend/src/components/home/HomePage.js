@@ -215,6 +215,21 @@ function HomePage({ user, setUser }) {
     setQuestions(prevQuestions => prevQuestions.filter(q => parseInt(q.id) !== parseInt(questionId)));
   };
 
+  /**
+   * Function to handle question updates
+   */
+  const handleQuestionUpdated = (updatedQuestion) => {
+    // Update the questions list with the updated question
+    setQuestions(prevQuestions => 
+      prevQuestions.map(q => 
+        parseInt(q.id) === parseInt(updatedQuestion.id) ? updatedQuestion : q
+      )
+    );
+    
+    // Also update the viewing question so the UI reflects the changes immediately
+    setViewingQuestion(updatedQuestion);
+  };
+
   // Function to handle viewing a full question
   const handleQuestionView = (question) => {
     // Add local view count increment for immediate UI feedback
@@ -409,6 +424,7 @@ function HomePage({ user, setUser }) {
         onClose={closeFullQuestion}
         question={viewingQuestion}
         currentUser={user}
+        onQuestionUpdated={handleQuestionUpdated}
       />
     </div>
   );
