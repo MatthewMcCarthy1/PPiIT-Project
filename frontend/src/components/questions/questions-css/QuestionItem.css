@@ -208,38 +208,3 @@
   color: #2ecc71 !important;
 }
 
-@media (max-width: 768px) {
-  .question-item {
-    padding: 20px 15px;
-  }
-  
-  .question-excerpt {
-    padding: 12px;
-    margin-bottom: 15px;
-  }
-
-  .question-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  
-  .question-tags {
-    margin-bottom: 5px;
-  }
-  
-  .user-details {
-    max-width: 100%;
-  }
-  
-  .question-date {
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 500px) {
-  .question-stats {
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-}

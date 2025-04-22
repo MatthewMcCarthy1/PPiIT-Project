@@ -4,18 +4,27 @@ import './questions-css/Comment.css';
 /**
  * Comment Component
  * 
- * Displays a single comment with author information and content
+ * Displays a single comment with author information and content.
+ * Allows authors to delete their own comments with a confirmation modal.
  * 
- * @param {Object} comment - Comment data object
- * @param {Object} currentUser - Current logged-in user
- * @param {Function} onDelete - Function to call when deleting a comment
+ * @param {Object} comment - Comment data object containing id, body, user_id, user_email, created_at
+ * @param {Object} currentUser - Current logged-in user object with id and other profile information
+ * @param {Function} onDelete - Function to call when deleting a comment, accepts comment ID parameter
  * @returns {JSX.Element} - Rendered component
  */
 function Comment({ comment, currentUser, onDelete }) {
+  // Controls the visibility of the delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Tracks the deletion request state to show loading indicators and disable buttons
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Format the date string to a more readable format
+  /**
+   * Formats a date string into a user-friendly format
+   * 
+   * @param {string} dateString - ISO date string from the API
+   * @returns {string} - Formatted date string showing date and time
+   */
   const formatDate = (dateString) => {
     const options = { 
       year: 'numeric', 
@@ -40,7 +49,11 @@ function Comment({ comment, currentUser, onDelete }) {
     setShowDeleteModal(false);
   };
   
-  // Handle delete confirmation
+  /**
+   * Handles the delete confirmation action
+   * 
+   * Calls the onDelete function passed as a prop and manages the loading state.
+   */
   const confirmDelete = async () => {
     setIsDeleting(true);
     await onDelete(comment.id);

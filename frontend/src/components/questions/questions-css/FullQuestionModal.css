@@ -785,39 +785,3 @@
   color: #4299e1;
   background-color: #ebf8ff;
 }
-
-@media (max-width: 768px) {
-  .full-question-overlay {
-    padding: 0;
-  }
-  
-  .full-question-modal {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    border-radius: 0;
-  }
-  
-  .full-question-header h2 {
-    font-size: 20px;
-  }
-  
-  .answer-form-actions {
-    flex-direction: column;
-    gap: 15px;
-    align-items: stretch;
-  }
-  
-  .answer-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  
-  .post-answer-btn,
-  .cancel-answer-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}

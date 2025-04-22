@@ -150,13 +150,3 @@
   background-size: contain;
   opacity: 0.6;
 }
-
-@media (max-width: 768px) {
-  .questions-container {
-    margin: 0;
-  }
-  
-  .questions-loading, .questions-error, .no-questions {
-    padding: 30px 20px;
-  }
-}
