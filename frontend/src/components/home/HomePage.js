@@ -202,6 +202,9 @@ function HomePage({ user, setUser }) {
 
   // Function to handle viewing a full question
   const handleQuestionView = (question) => {
+    // Add local view count increment for immediate UI feedback
+    // This will be properly updated from the server on the next data refresh
+    question.views = (parseInt(question.views) || 0) + 1;
     setViewingQuestion(question);
   };
   
