@@ -204,6 +204,10 @@
   margin-top: 2px;
 }
 
+.accepted-indicator {
+  color: #2ecc71 !important;
+}
+
 @media (max-width: 768px) {
   .question-item {
     padding: 20px 15px;
