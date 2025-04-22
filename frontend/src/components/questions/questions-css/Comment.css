@@ -1,0 +1,184 @@
+.comment {
+  padding: 8px 0;
+  border-bottom: 1px solid #eaeaea;
+  font-size: 14px;
+}
+
+.comment:last-child {
+  border-bottom: none;
+}
+
+.comment-content {
+  color: #4a5568;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-author {
+  color: #718096;
+  font-size: 12px;
+}
+
+.comment-author-name {
+  color: #4299e1;
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.comment-date {
+  color: #a0aec0;
+}
+
+.delete-comment-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e0;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.delete-comment-btn:hover {
+  color: #e53e3e;
+}
+
+.delete-comment-btn i {
+  font-size: 12px;
+}
+
+/* Comment Delete Modal */
+.comment-delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.comment-delete-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.comment-delete-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.comment-delete-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2d3748;
+}
+
+.comment-delete-close-button {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #a0aec0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.comment-delete-close-button:hover {
+  color: #718096;
+}
+
+.comment-delete-modal-content {
+  padding: 20px;
+  text-align: center;
+}
+
+.comment-delete-warning {
+  font-size: 36px;
+  color: #f56565;
+  margin-bottom: 15px;
+}
+
+.comment-delete-modal-content p {
+  color: #4a5568;
+  margin: 5px 0;
+}
+
+.comment-delete-modal-subtext {
+  font-size: 13px;
+  color: #718096;
+}
+
+.comment-delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 15px 20px;
+  gap: 10px;
+  border-top: 1px solid #edf2f7;
+}
+
+.comment-delete-cancel-btn,
+.comment-delete-confirm-btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.comment-delete-cancel-btn {
+  background-color: #edf2f7;
+  color: #4a5568;
+  border: none;
+}
+
+.comment-delete-cancel-btn:hover:not(:disabled) {
+  background-color: #e2e8f0;
+}
+
+.comment-delete-confirm-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-delete-confirm-btn:hover:not(:disabled) {
+  background-color: #e53e3e;
+}
+
+.comment-delete-cancel-btn:disabled,
+.comment-delete-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
