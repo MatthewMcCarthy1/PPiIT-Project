@@ -8,8 +8,9 @@ import "./questions-css/FullQuestionModal.css";
  * @param {function} onClose - Function to call when closing the modal
  * @param {Object} question - The complete question data to display
  * @param {Object} currentUser - The current logged-in user
+ * @param {function} onQuestionUpdated - Function to call when the question is updated
  */
-function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
+function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionUpdated }) {
   // State for the answer input
   const [answerBody, setAnswerBody] = useState("");
   
@@ -31,6 +32,15 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   const [editingAnswerId, setEditingAnswerId] = useState(null);
   const [editAnswerBody, setEditAnswerBody] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // State for question editing
+  const [isEditingQuestion, setIsEditingQuestion] = useState(false);
+  const [editQuestionData, setEditQuestionData] = useState({
+    title: '',
+    body: '',
+    tags: ''
+  });
+  const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
 
   const newAnswerRef = useRef(null);
   const answerInputRef = useRef(null);
@@ -391,48 +401,222 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
     return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
   };
 
+  /**
+   * Handle question edit button click
+   */
+  const handleEditQuestionClick = () => {
+    setEditQuestionData({
+      title: question.title,
+      body: question.body,
+      tags: question.tags || ''
+    });
+    setIsEditingQuestion(true);
+  };
+
+  /**
+   * Cancel editing question
+   */
+  const cancelEditQuestion = () => {
+    setIsEditingQuestion(false);
+  };
+
+  /**
+   * Handle input changes for question edit form
+   */
+  const handleEditQuestionChange = (e) => {
+    const { name, value } = e.target;
+    setEditQuestionData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  /**
+   * Submit edited question
+   */
+  const submitEditedQuestion = async () => {
+    // Validate inputs
+    if (!editQuestionData.title.trim() || !editQuestionData.body.trim()) {
+      alert('Title and body cannot be empty');
+      return;
+    }
+    
+    setIsUpdatingQuestion(true);
+    
+    try {
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'updateQuestion',
+          questionId: question.id,
+          userId: currentUser.id,
+          title: editQuestionData.title,
+          body: editQuestionData.body,
+          tags: editQuestionData.tags
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the question in parent component
+        if (onQuestionUpdated) {
+          onQuestionUpdated(data.question);
+        }
+        
+        // Exit edit mode
+        setIsEditingQuestion(false);
+        
+        // Show success message
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Question updated successfully!'
+        });
+        
+        // Clear success message after some time
+        setTimeout(() => {
+          setSubmissionStatus(null);
+        }, 3000);
+      } else {
+        alert(data.message || 'Failed to update question');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    } finally {
+      setIsUpdatingQuestion(false);
+    }
+  };
+
   return (
     <div className="full-question-overlay" onClick={onClose}>
       <div className="full-question-modal" onClick={e => e.stopPropagation()}>
         <div className="full-question-header">
-          <h2>{question.title}</h2>
-          <button className="close-full-question" onClick={onClose}>
-            <i className="fas fa-times"></i>
-          </button>
+          {isEditingQuestion ? (
+            <h2>Edit Question</h2>
+          ) : (
+            <h2>{question.title}</h2>
+          )}
+          <div className="question-header-actions">
+            {currentUser && parseInt(question.user_id) === parseInt(currentUser.id) && !isEditingQuestion && (
+              <button 
+                className="question-edit-btn" 
+                onClick={handleEditQuestionClick}
+                title="Edit this question"
+              >
+                <i className="fas fa-edit"></i>
+              </button>
+            )}
+            <button className="close-full-question" onClick={onClose}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
         </div>
         
         <div className="full-question-content">
-          <div className="question-body">
-            {question.body}
-          </div>
-          
-          {/* Author info moved below question body */}
-          <div className="full-question-meta">
-            <div className="full-question-author">
-              <div className="author-avatar">
-                {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
+          {isEditingQuestion ? (
+            <div className="question-edit-form">
+              <div className="edit-form-group">
+                <label htmlFor="edit-title">Title</label>
+                <input
+                  type="text"
+                  id="edit-title"
+                  name="title"
+                  value={editQuestionData.title}
+                  onChange={handleEditQuestionChange}
+                  className="edit-title-input"
+                  disabled={isUpdatingQuestion}
+                />
               </div>
-              <div className="author-info">
-                <span className="author-name">{question.user_email}</span>
-                <span className="post-date">Posted on {formatDate(question.created_at)}</span>
+              <div className="edit-form-group">
+                <label htmlFor="edit-body">Body</label>
+                <textarea
+                  id="edit-body"
+                  name="body"
+                  value={editQuestionData.body}
+                  onChange={handleEditQuestionChange}
+                  className="edit-body-textarea"
+                  disabled={isUpdatingQuestion}
+                ></textarea>
+              </div>
+              <div className="edit-form-group">
+                <label htmlFor="edit-tags">Tags (comma separated)</label>
+                <input
+                  type="text"
+                  id="edit-tags"
+                  name="tags"
+                  value={editQuestionData.tags}
+                  onChange={handleEditQuestionChange}
+                  className="edit-tags-input"
+                  placeholder="e.g. javascript, react, css"
+                  disabled={isUpdatingQuestion}
+                />
+              </div>
+              <div className="question-edit-actions">
+                <button 
+                  className="question-save-btn" 
+                  onClick={submitEditedQuestion}
+                  disabled={isUpdatingQuestion}
+                >
+                  {isUpdatingQuestion ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Updating...
+                    </>
+                  ) : 'Save Changes'}
+                </button>
+                <button 
+                  className="question-cancel-btn" 
+                  onClick={cancelEditQuestion}
+                  disabled={isUpdatingQuestion}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="question-body">
+              {question.body}
+            </div>
+          )}
           
-          <div className="full-question-tags">
-            {formatTags(question.tags).length > 0 ? (
-              <>
-                <span className="tags-label">Tags:</span>
-                <div className="tags-container">
-                  {formatTags(question.tags).map((tag, index) => (
-                    <span key={index} className="question-tag">{tag}</span>
-                  ))}
+          {/* Author info */}
+          {!isEditingQuestion && (
+            <div className="full-question-meta">
+              <div className="full-question-author">
+                <div className="author-avatar">
+                  {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
                 </div>
-              </>
-            ) : (
-              <span className="no-tags">No tags</span>
-            )}
-          </div>
+                <div className="author-info">
+                  <span className="author-name">{question.user_email}</span>
+                  <span className="post-date">Posted on {formatDate(question.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Tags */}
+          {!isEditingQuestion && (
+            <div className="full-question-tags">
+              {formatTags(question.tags).length > 0 ? (
+                <>
+                  <span className="tags-label">Tags:</span>
+                  <div className="tags-container">
+                    {formatTags(question.tags).map((tag, index) => (
+                      <span key={index} className="question-tag">{tag}</span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <span className="no-tags">No tags</span>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="answers-section">
