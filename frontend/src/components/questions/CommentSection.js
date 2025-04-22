@@ -5,26 +5,44 @@ import './questions-css/CommentSection.css';
 /**
  * Comment Section Component
  * 
- * Displays comments for answers and provides a form to add new comments
+ * Displays a collapsible section of comments for an answer and provides a form
+ * to add new comments. Handles loading, displaying, adding, and deleting comments.
  * 
- * @param {number} answerId - ID of the answer
- * @param {Object} currentUser - Current logged-in user
+ * @param {number} answerId - ID of the answer to fetch comments for
+ * @param {Object} currentUser - Current logged-in user object with id and other profile information
  * @returns {JSX.Element} - Rendered component
  */
 function CommentSection({ answerId, currentUser }) {
+  // Stores the list of comments retrieved from the server
   const [comments, setComments] = useState([]);
+  
+  // Indicates whether comments are currently being fetched from the server
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Stores any error message that occurs during data fetching
   const [error, setError] = useState(null);
+  
+  // Stores the text input for a new comment being composed
   const [newComment, setNewComment] = useState('');
+  
+  // Tracks whether a comment is currently being submitted to prevent double submissions
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Controls whether the comments list is expanded/visible or collapsed/hidden
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   
-  // Fetch comments when component mounts or answerId changes
+  /**
+   * Fetch comments when component mounts or when answerId changes
+   * This ensures comments are always up-to-date for the current answer
+   */
   useEffect(() => {
     fetchComments();
   }, [answerId]);
   
-  // Fetch comments from the server
+  /**
+   * Fetches comments for the current answer from the server
+   * Updates state with the retrieved comments or any error messages
+   */
   const fetchComments = async () => {
     setIsLoading(true);
     setError(null);
@@ -52,7 +70,12 @@ function CommentSection({ answerId, currentUser }) {
     }
   };
   
-  // Submit a new comment
+  /**
+   * Submits a new comment to the server
+   * Adds the new comment to the list if successful
+   * 
+   * @param {Event} e - Form submission event
+   */
   const handleSubmitComment = async (e) => {
     e.preventDefault();
     
@@ -102,7 +125,12 @@ function CommentSection({ answerId, currentUser }) {
     }
   };
   
-  // Delete a comment
+  /**
+   * Deletes a comment from the server
+   * Removes the comment from the list if successful
+   * 
+   * @param {number} commentId - ID of the comment to delete
+   */
   const handleDeleteComment = async (commentId) => {
     try {
       const hostname = window.location.hostname;
@@ -134,7 +162,9 @@ function CommentSection({ answerId, currentUser }) {
     }
   };
   
-  // Toggle comments section visibility
+  /**
+   * Toggles the visibility of the comments section
+   */
   const toggleComments = () => {
     setCommentsExpanded(!commentsExpanded);
   };
