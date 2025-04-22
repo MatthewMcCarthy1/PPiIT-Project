@@ -27,6 +27,11 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   const [answerToDelete, setAnswerToDelete] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // State for answer editing
+  const [editingAnswerId, setEditingAnswerId] = useState(null);
+  const [editAnswerBody, setEditAnswerBody] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const newAnswerRef = useRef(null);
   const answerInputRef = useRef(null);
 
@@ -252,6 +257,83 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   };
 
   /**
+   * Handle answer edit button click
+   */
+  const handleEditClick = (answer) => {
+    setEditingAnswerId(answer.id);
+    setEditAnswerBody(answer.body);
+  };
+
+  /**
+   * Cancel editing answer
+   */
+  const cancelEditAnswer = () => {
+    setEditingAnswerId(null);
+    setEditAnswerBody("");
+  };
+
+  /**
+   * Submit edited answer
+   */
+  const submitEditedAnswer = async (answerId) => {
+    if (!editAnswerBody.trim()) {
+      alert('Answer cannot be empty');
+      return;
+    }
+    
+    setIsUpdating(true);
+    
+    try {
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'updateAnswer',
+          answerId: answerId,
+          userId: currentUser.id,
+          body: editAnswerBody
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the answer in the list
+        setAnswers(prevAnswers => prevAnswers.map(a => 
+          a.id === answerId ? data.answer : a
+        ));
+        
+        // Exit edit mode
+        setEditingAnswerId(null);
+        setEditAnswerBody("");
+        
+        // Show brief success message
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Answer updated successfully!'
+        });
+        
+        // Clear success message after some time
+        setTimeout(() => {
+          setSubmissionStatus(null);
+        }, 3000);
+      } else {
+        alert(data.message || 'Failed to update answer');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  /**
    * Handle textarea focus
    */
   const handleTextareaFocus = () => {
@@ -391,9 +473,41 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
                   className="answer-item"
                   ref={index === 0 ? newAnswerRef : null}
                 >
-                  <div className="answer-content">
-                    {answer.body}
-                  </div>
+                  {editingAnswerId === answer.id ? (
+                    <div className="answer-edit-form">
+                      <textarea
+                        value={editAnswerBody}
+                        onChange={(e) => setEditAnswerBody(e.target.value)}
+                        className="answer-edit-textarea"
+                        disabled={isUpdating}
+                      ></textarea>
+                      <div className="answer-edit-actions">
+                        <button 
+                          className="answer-save-btn" 
+                          onClick={() => submitEditedAnswer(answer.id)}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin"></i> Updating...
+                            </>
+                          ) : 'Save Changes'}
+                        </button>
+                        <button 
+                          className="answer-cancel-btn" 
+                          onClick={cancelEditAnswer}
+                          disabled={isUpdating}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="answer-content">
+                      {answer.body}
+                    </div>
+                  )}
+                  
                   <div className="answer-meta">
                     <div className="answer-author">
                       <div className="user-avatar small">
@@ -407,15 +521,26 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
                       </div>
                     </div>
                     
-                    {/* Show delete button if current user is the answer author */}
+                    {/* Show edit/delete buttons if current user is the answer author */}
                     {currentUser && parseInt(answer.user_id) === parseInt(currentUser.id) && (
-                      <button 
-                        className="answer-delete-btn" 
-                        onClick={() => handleDeleteClick(answer)}
-                        title="Delete this answer"
-                      >
-                        <i className="fas fa-trash-alt"></i>
-                      </button>
+                      <div className="answer-actions">
+                        {editingAnswerId !== answer.id && (
+                          <button 
+                            className="answer-edit-btn" 
+                            onClick={() => handleEditClick(answer)}
+                            title="Edit this answer"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                        )}
+                        <button 
+                          className="answer-delete-btn" 
+                          onClick={() => handleDeleteClick(answer)}
+                          title="Delete this answer"
+                        >
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
