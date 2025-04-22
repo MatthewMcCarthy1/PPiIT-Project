@@ -94,6 +94,9 @@ try {
             case 'deleteAnswer':
                 deleteAnswer($conn, $data);
                 break;
+            case 'updateAnswer':
+                updateAnswer($conn, $data);
+                break;
             case 'incrementViewCount':
                 incrementViewCount($conn, $data);
                 break;
@@ -678,6 +681,118 @@ function deleteAnswer($conn, $data) {
         echo json_encode([
             "success" => false, 
             "message" => "Error processing delete request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Update an existing answer
+ * Ensures only the owner can edit their own answers
+ */
+function updateAnswer($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->answerId) || !isset($data->userId) || !isset($data->body) || trim($data->body) === '') {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $answerId = intval($data->answerId);
+    $userId = intval($data->userId);
+    $body = trim($data->body);
+
+    try {
+        // First check if the user is the owner of this answer
+        $checkStmt = $conn->prepare("SELECT user_id FROM answers WHERE id = ?");
+        if (!$checkStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+
+        $checkStmt->bind_param("i", $answerId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+
+        // If answer doesn't exist
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Answer not found"
+            ]);
+            return;
+        }
+
+        // Check if user is the owner
+        $answer = $result->fetch_assoc();
+        if (intval($answer['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "You can only edit your own answers"
+            ]);
+            return;
+        }
+
+        // User is authorized, proceed with update
+        $updateStmt = $conn->prepare("UPDATE answers SET body = ? WHERE id = ?");
+        if (!$updateStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error during update"
+            ]);
+            return;
+        }
+
+        $updateStmt->bind_param("si", $body, $answerId);
+        
+        if ($updateStmt->execute()) {
+            // Fetch the updated answer with user info
+            $fetchStmt = $conn->prepare("SELECT a.*, u.email as user_email FROM answers a 
+                                         JOIN users u ON a.user_id = u.id 
+                                         WHERE a.id = ?");
+            $fetchStmt->bind_param("i", $answerId);
+            $fetchStmt->execute();
+            $answerResult = $fetchStmt->get_result();
+            $updatedAnswer = $answerResult->fetch_assoc();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Answer successfully updated",
+                "answer" => $updatedAnswer
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to update answer"
+            ]);
+        }
+        
+        $updateStmt->close();
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing update request: " . $e->getMessage()
         ]);
     }
 }
