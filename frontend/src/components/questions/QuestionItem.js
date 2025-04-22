@@ -5,21 +5,33 @@ import DeleteConfirmModal from "./DeleteConfirmModal";
 /**
  * QuestionItem Component
  * 
- * Displays an individual question with its title, body excerpt, tags, 
- * author information, and creation date.
+ * Displays an individual question in a list format with interactive elements.
+ * Features include question preview, tags, bookmarking, deletion (for authors),
+ * and statistics like answer count and views.
  * 
- * @param {Object} question - Question object containing all question details
+ * @param {Object} question - Question object containing id, title, body, tags, user_id, etc.
+ * @param {Object} currentUser - Currently logged-in user object (null if not logged in)
+ * @param {Function} onQuestionDeleted - Callback function invoked after successful question deletion
+ * @param {Function} onQuestionView - Callback function to handle clicking on a question to view details
  * @returns {JSX.Element} - Rendered component
  */
 function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView }) {
+  // Tracks whether the current question is bookmarked by the user
   const [isBookmarked, setIsBookmarked] = useState(false);
+  
+  // Controls visibility of the delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Tracks the progress of a deletion operation for UI feedback
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Check if the current user is the author of the question
+  // Determines if the current user is the author of the question for permission checks
   const isAuthor = parseInt(question.user_id) === parseInt(currentUser?.id);
   
-  // Check if the question is bookmarked
+  /**
+   * Check local storage to determine if this question is bookmarked
+   * Updates the bookmark state whenever the question ID changes
+   */
   useEffect(() => {
     const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
     setIsBookmarked(bookmarks.includes(parseInt(question.id)));
@@ -29,7 +41,7 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
    * Formats a date string into a more readable format
    * 
    * @param {string} dateString - ISO date string from database
-   * @returns {string} - Formatted date string
+   * @returns {string} - Formatted date string with "Posted on" prefix
    */
   const formatDate = (dateString) => {
     const options = { 
@@ -44,6 +56,7 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
 
   /**
    * Converts comma-separated tags string into an array of individual tags
+   * Filters out empty tags and trims whitespace
    * 
    * @param {string} tags - Comma-separated tag string
    * @returns {Array} - Array of individual tag strings
@@ -53,7 +66,12 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
     return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
   };
 
-  // Toggle bookmark
+  /**
+   * Toggles the bookmark status of the question
+   * Updates both the local state and localStorage
+   * 
+   * @param {Event} e - Click event object
+   */
   const toggleBookmark = (e) => {
     e.stopPropagation(); // Prevent event bubbling
     
@@ -73,7 +91,10 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
     setIsBookmarked(!isBookmarked);
   };
 
-  // Handle click on question item
+  /**
+   * Handles clicks on the question item to view the full question
+   * Calls the onQuestionView callback with the question object
+   */
   const handleQuestionClick = () => {
     // Call the passed handler to show the full question
     if (onQuestionView) {
@@ -81,18 +102,28 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
     }
   };
 
-  // Handle deletion of the question
+  /**
+   * Opens the delete confirmation modal
+   * Stops event propagation to prevent opening the question
+   * 
+   * @param {Event} e - Click event object
+   */
   const handleDeleteClick = (e) => {
     e.stopPropagation(); // Prevent opening the question
     setShowDeleteModal(true);
   };
 
-  // Close delete confirmation modal
+  /**
+   * Closes the delete confirmation modal without taking action
+   */
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
   };
 
-  // Confirm deletion
+  /**
+   * Sends delete request to the server after confirmation
+   * Updates UI state during the process and handles success/failure
+   */
   const confirmDelete = async () => {
     setIsDeleting(true);
     
@@ -135,8 +166,9 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
 
   return (
     <>
+      {/* Question card - clickable to view full question */}
       <div className="question-item" onClick={handleQuestionClick}>
-        {/* Question title with actions */}
+        {/* Question header containing title and action buttons (bookmark/delete) */}
         <div className="question-header">
           <h3 className="question-title">{question.title}</h3>
           <div className="question-actions">
@@ -160,14 +192,14 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
           </div>
         </div>
         
-        {/* Question body preview - truncated to 200 characters if longer */}
+        {/* Question body preview - truncated with ellipsis if too long */}
         <div className="question-excerpt">
           {question.body.length > 200 
             ? `${question.body.substring(0, 200)}...` 
             : question.body}
         </div>
         
-        {/* Question stats section */}
+        {/* Question statistics section showing answer count, views and link */}
         <div className="question-stats">
           <div className="stat-item">
             <i className={`${parseInt(question.has_accepted_answer) === 1 ? 'fas fa-check-circle accepted-indicator' : 'far fa-comment-alt'}`}></i>
@@ -183,9 +215,9 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
           </div>
         </div>
         
-        {/* Question metadata: tags, author, and date */}
+        {/* Question metadata section with tags and author information */}
         <div className="question-meta">
-          {/* Tags section */}
+          {/* Tags display area */}
           <div className="question-tags-container">
             <div className="question-tags">
               {formatTags(question.tags).length > 0 ? (
@@ -198,11 +230,13 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
             </div>
           </div>
           
-          {/* Author and date information */}
+          {/* Author information with avatar and details */}
           <div className="question-info">
+            {/* Simple avatar using first letter of email */}
             <div className="user-avatar">
               {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
             </div>
+            {/* Author email and posting date */}
             <div className="user-details">
               <span className="question-author">{question.user_email}</span>
               <span className="question-date">
@@ -213,7 +247,7 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation modal - only rendered when showDeleteModal is true */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={closeDeleteModal}
