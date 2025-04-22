@@ -22,6 +22,11 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState(null);
 
+  // State for answer deletion
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [answerToDelete, setAnswerToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const newAnswerRef = useRef(null);
   const answerInputRef = useRef(null);
 
@@ -188,6 +193,65 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   };
 
   /**
+   * Handle answer deletion
+   */
+  const handleDeleteClick = (answer) => {
+    // Show delete confirmation modal
+    setAnswerToDelete(answer);
+    setShowDeleteModal(true);
+  };
+
+  /**
+   * Close delete confirmation modal
+   */
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setAnswerToDelete(null);
+  };
+
+  /**
+   * Confirm deletion of an answer
+   */
+  const confirmDeleteAnswer = async () => {
+    if (!answerToDelete) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const hostname = window.location.hostname;
+      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          action: 'deleteAnswer',
+          answerId: answerToDelete.id,
+          userId: currentUser.id
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove the deleted answer from the list
+        setAnswers(prevAnswers => prevAnswers.filter(a => a.id !== answerToDelete.id));
+        // Close the modal
+        closeDeleteModal();
+      } else {
+        alert(data.message || 'Failed to delete answer');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  /**
    * Handle textarea focus
    */
   const handleTextareaFocus = () => {
@@ -342,6 +406,17 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
                         </span>
                       </div>
                     </div>
+                    
+                    {/* Show delete button if current user is the answer author */}
+                    {currentUser && parseInt(answer.user_id) === parseInt(currentUser.id) && (
+                      <button 
+                        className="answer-delete-btn" 
+                        onClick={() => handleDeleteClick(answer)}
+                        title="Delete this answer"
+                      >
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -420,6 +495,49 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
           </div>
         </div>
       </div>
+      
+      {/* Delete answer confirmation modal */}
+      {showDeleteModal && (
+        <div className="delete-modal-overlay" onClick={closeDeleteModal}>
+          <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-header">
+              <h3>Delete Answer</h3>
+              <button className="delete-close-button" onClick={closeDeleteModal}>×</button>
+            </div>
+            
+            <div className="delete-modal-content">
+              <div className="delete-warning">
+                <i className="fas fa-exclamation-triangle"></i>
+              </div>
+              <p>Are you sure you want to delete your answer?</p>
+              <p className="delete-modal-subtext">This action cannot be undone.</p>
+            </div>
+            
+            <div className="delete-modal-actions">
+              <button 
+                className="delete-cancel-btn" 
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="delete-confirm-btn" 
+                onClick={confirmDeleteAnswer}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Deleting...
+                  </>
+                ) : (
+                  'Delete Answer'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
