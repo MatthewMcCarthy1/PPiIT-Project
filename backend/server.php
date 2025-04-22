@@ -91,6 +91,9 @@ try {
             case 'submitAnswer':
                 submitAnswer($conn, $data);
                 break;
+            case 'incrementViewCount':
+                incrementViewCount($conn, $data);
+                break;
             default:
                 echo json_encode(["success" => false, "message" => "Invalid action"]);
         }
@@ -558,6 +561,54 @@ function submitAnswer($conn, $data) {
         }
         
         $stmt->close();
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing request: " . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Increment view count for a question
+ */
+function incrementViewCount($conn, $data) {
+    // Check if question ID is provided
+    if (!isset($data->questionId)) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Question ID is required"
+        ]);
+        return;
+    }
+    
+    $questionId = intval($data->questionId);
+    
+    try {
+        // Update view count in the database
+        $stmt = $conn->prepare("UPDATE questions SET views = views + 1 WHERE id = ?");
+        $stmt->bind_param("i", $questionId);
+        
+        if ($stmt->execute()) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true,
+                "message" => "View count incremented successfully"
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to increment view count"
+            ]);
+        }
+        
     } catch (Exception $e) {
         // Clear any output before sending JSON
         ob_clean();
