@@ -255,6 +255,16 @@ function HomePage({ user, setUser }) {
     }
   };
 
+  // Function to clear only the search input
+  const clearSearchInput = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    const searchBar = document.querySelector(".search-bar");
+    if (searchBar) {
+      searchBar.value = "";
+    }
+  };
+
   // Tag selection handler
   const handleTagSelect = (tag) => {
     if (selectedTag === tag) {
@@ -296,8 +306,14 @@ function HomePage({ user, setUser }) {
             placeholder="Search for questions..."
             onChange={handleSearchInput}
             onKeyDown={handleSearchKeyPress}
+            value={searchInput}
           />
-          <i className="fas fa-search search-icon"></i>
+          {searchInput && (
+            <i 
+              className="fas fa-times clear-search-icon" 
+              onClick={clearSearchInput}
+            ></i>
+          )}
         </div>
         <div className="banner-buttons">
           <span className="welcome-message">

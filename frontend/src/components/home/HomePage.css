@@ -71,12 +71,18 @@ body {
   width: 100%;
 }
 
-.search-icon {
+.clear-search-icon {
   position: absolute;
-  padding-bottom: 13px;
   right: 10px;
   color: #888;
-  pointer-events: none;
+  cursor: pointer;
+  
+  transition: color 0.2s ease;
+  padding-bottom: 13px;
+}
+
+.clear-search-icon:hover {
+  color: #ff4b2b;
 }
 
 .banner-buttons {
