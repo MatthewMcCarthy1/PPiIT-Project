@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./questions-css/FullQuestionModal.css";
+import CommentSection from './CommentSection';
 
 /**
  * Modal to display the full question details
@@ -648,9 +649,11 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
               </div>
             </div>
           ) : (
-            <div className="question-body">
-              {question.body}
-            </div>
+            <>
+              <div className="question-body">
+                {question.body}
+              </div>
+            </>
           )}
           
           {/* Author info */}
@@ -765,6 +768,12 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
                       <div className="answer-content">
                         {answer.body}
                       </div>
+                      
+                      {/* Comment section for answers */}
+                      <CommentSection 
+                        answerId={answer.id} 
+                        currentUser={currentUser}
+                      />
                     </>
                   )}
                   
