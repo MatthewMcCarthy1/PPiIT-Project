@@ -85,6 +85,9 @@ try {
             case 'submitQuestion':
                 submitQuestion($conn, $data);
                 break;
+            case 'updateQuestion':
+                updateQuestion($conn, $data);
+                break;
             case 'deleteQuestion':
                 deleteQuestion($conn, $data);
                 break;
@@ -382,6 +385,124 @@ function submitQuestion($conn, $data)
         echo json_encode([
             "success" => false, 
             "message" => "Error processing question"
+        ]);
+    }
+}
+
+/**
+ * Update an existing question
+ * Ensures only the owner can edit their own questions
+ */
+function updateQuestion($conn, $data) {
+    // Check if required parameters are provided
+    if (!isset($data->questionId) || !isset($data->userId) || 
+        !isset($data->title) || !isset($data->body) || 
+        empty(trim($data->title)) || empty(trim($data->body))) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Missing required parameters"
+        ]);
+        return;
+    }
+
+    // Convert parameters to integers to ensure type safety
+    $questionId = intval($data->questionId);
+    $userId = intval($data->userId);
+    $title = trim($data->title);
+    $body = trim($data->body);
+    $tags = isset($data->tags) ? trim($data->tags) : "";
+
+    try {
+        // First check if the user is the owner of this question
+        $checkStmt = $conn->prepare("SELECT user_id FROM questions WHERE id = ?");
+        if (!$checkStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error"
+            ]);
+            return;
+        }
+
+        $checkStmt->bind_param("i", $questionId);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+
+        // If question doesn't exist
+        if ($result->num_rows === 0) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Question not found"
+            ]);
+            return;
+        }
+
+        // Check if user is the owner
+        $question = $result->fetch_assoc();
+        if (intval($question['user_id']) !== $userId) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "You can only edit your own questions"
+            ]);
+            return;
+        }
+
+        // User is authorized, proceed with update
+        $updateStmt = $conn->prepare("UPDATE questions SET title = ?, body = ?, tags = ? WHERE id = ?");
+        if (!$updateStmt) {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Database error during update"
+            ]);
+            return;
+        }
+
+        $updateStmt->bind_param("sssi", $title, $body, $tags, $questionId);
+        
+        if ($updateStmt->execute()) {
+            // Fetch the updated question with user info
+            $fetchStmt = $conn->prepare("SELECT q.*, u.email as user_email,
+                                       (SELECT COUNT(*) FROM answers WHERE question_id = q.id) as answer_count
+                                       FROM questions q 
+                                       JOIN users u ON q.user_id = u.id 
+                                       WHERE q.id = ?");
+            $fetchStmt->bind_param("i", $questionId);
+            $fetchStmt->execute();
+            $questionResult = $fetchStmt->get_result();
+            $updatedQuestion = $questionResult->fetch_assoc();
+            
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => true, 
+                "message" => "Question successfully updated",
+                "question" => $updatedQuestion
+            ]);
+        } else {
+            // Clear any output before sending JSON
+            ob_clean();
+            echo json_encode([
+                "success" => false, 
+                "message" => "Failed to update question"
+            ]);
+        }
+        
+        $updateStmt->close();
+    } catch (Exception $e) {
+        // Clear any output before sending JSON
+        ob_clean();
+        echo json_encode([
+            "success" => false, 
+            "message" => "Error processing update request: " . $e->getMessage()
         ]);
     }
 }
