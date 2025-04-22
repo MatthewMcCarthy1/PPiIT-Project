@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `questions` (
   `tags` varchar(255) DEFAULT NULL,
   `views` int DEFAULT 0,
   `answer_count` int DEFAULT 0,
+  `has_accepted_answer` tinyint DEFAULT 0,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS `answers` (
   `question_id` int NOT NULL,
   `user_id` int NOT NULL,
   `body` text NOT NULL,
+  `is_accepted` tinyint DEFAULT 0,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `question_id` (`question_id`),
