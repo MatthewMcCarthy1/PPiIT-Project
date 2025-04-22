@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./questions-css/FullQuestionModal.css";
 
 /**
@@ -21,6 +21,9 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
   // State for answer submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState(null);
+
+  const newAnswerRef = useRef(null);
+  const answerInputRef = useRef(null);
 
   // Fetch answers when question changes
   useEffect(() => {
@@ -118,7 +121,25 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
           message: 'Answer posted successfully!'
         });
         
-        // Clear success message after 3 seconds
+        // Scroll to the new answer with animation
+        setTimeout(() => {
+          if (newAnswerRef.current) {
+            newAnswerRef.current.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'center'
+            });
+            
+            // Add highlight class then remove after animation
+            newAnswerRef.current.classList.add('highlight-answer');
+            setTimeout(() => {
+              if (newAnswerRef.current) {
+                newAnswerRef.current.classList.remove('highlight-answer');
+              }
+            }, 2000);
+          }
+        }, 300);
+
+        // Clear success message after some time
         setTimeout(() => {
           setSubmissionStatus(null);
         }, 3000);
@@ -136,6 +157,42 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /**
+   * Handle textarea focus
+   */
+  const handleTextareaFocus = () => {
+    if (answerInputRef.current) {
+      answerInputRef.current.classList.add('focused');
+    }
+  };
+
+  /**
+   * Handle textarea blur
+   */
+  const handleTextareaBlur = () => {
+    if (answerInputRef.current) {
+      answerInputRef.current.classList.remove('focused');
+    }
+  };
+
+  /**
+   * Get character count class based on remaining characters
+   */
+  const getCharCountClass = () => {
+    const length = answerBody.length;
+    if (length > 1800) return 'char-count-warning';
+    if (length > 1950) return 'char-count-danger';
+    return '';
+  };
+
+  /**
+   * Cancel answer submission and clear form
+   */
+  const handleCancelAnswer = () => {
+    setAnswerBody("");
+    setSubmissionStatus(null);
   };
 
   /**
@@ -170,21 +227,22 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
           </button>
         </div>
         
-        <div className="full-question-meta">
-          <div className="full-question-author">
-            <div className="author-avatar">
-              {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
-            </div>
-            <div className="author-info">
-              <span className="author-name">{question.user_email}</span>
-              <span className="post-date">Posted on {formatDate(question.created_at)}</span>
-            </div>
-          </div>
-        </div>
-        
         <div className="full-question-content">
           <div className="question-body">
             {question.body}
+          </div>
+          
+          {/* Author info moved below question body */}
+          <div className="full-question-meta">
+            <div className="full-question-author">
+              <div className="author-avatar">
+                {question.user_email ? question.user_email.charAt(0).toUpperCase() : '?'}
+              </div>
+              <div className="author-info">
+                <span className="author-name">{question.user_email}</span>
+                <span className="post-date">Posted on {formatDate(question.created_at)}</span>
+              </div>
+            </div>
           </div>
           
           <div className="full-question-tags">
@@ -235,8 +293,12 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
           {/* Answer list */}
           {!isLoadingAnswers && !answerError && answers.length > 0 && (
             <div className="answers-list">
-              {answers.map(answer => (
-                <div key={answer.id} className="answer-item">
+              {answers.map((answer, index) => (
+                <div 
+                  key={answer.id} 
+                  className="answer-item"
+                  ref={index === 0 ? newAnswerRef : null}
+                >
                   <div className="answer-content">
                     {answer.body}
                   </div>
@@ -260,6 +322,10 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
           
           {/* Answer form */}
           <div className="answer-form">
+            <h4 className="answer-form-heading">
+              <i className="fas fa-pen"></i> Your Answer
+            </h4>
+            
             {submissionStatus && (
               <div className={`answer-submission-status ${submissionStatus.type}`}>
                 <i className={`fas ${submissionStatus.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
@@ -267,33 +333,62 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser }) {
               </div>
             )}
             
-            <form onSubmit={handleAnswerSubmit}>
-              <textarea 
-                value={answerBody}
-                onChange={(e) => setAnswerBody(e.target.value)}
-                placeholder="Write your answer here..." 
-                className="answer-input"
-                disabled={isSubmitting}
-                maxLength="2000"
-              ></textarea>
+            <form onSubmit={handleAnswerSubmit} className={isSubmitting ? 'form-submitting' : ''}>
+              <div className="answer-input-wrapper" ref={answerInputRef}>
+                <textarea 
+                  value={answerBody}
+                  onChange={(e) => setAnswerBody(e.target.value)}
+                  placeholder="Write your answer here..." 
+                  className="answer-input"
+                  disabled={isSubmitting}
+                  maxLength="2000"
+                  onFocus={handleTextareaFocus}
+                  onBlur={handleTextareaBlur}
+                  aria-label="Your answer"
+                ></textarea>
+                
+                {isSubmitting && (
+                  <div className="input-overlay">
+                    <div className="overlay-spinner"></div>
+                    <span>Submitting your answer...</span>
+                  </div>
+                )}
+              </div>
               
               <div className="answer-form-actions">
-                <span className="answer-char-count">
-                  {answerBody.length}/2000 characters
+                <span className={`answer-char-count ${getCharCountClass()}`}>
+                  {2000 - answerBody.length} characters remaining
                 </span>
-                <button 
-                  type="submit" 
-                  className="post-answer-btn"
-                  disabled={isSubmitting || !answerBody.trim()}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i> Posting...
-                    </>
-                  ) : 'Post Your Answer'}
-                </button>
+                <div className="answer-buttons">
+                  {answerBody.trim() && !isSubmitting && (
+                    <button 
+                      type="button" 
+                      className="cancel-answer-btn" 
+                      onClick={handleCancelAnswer}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button 
+                    type="submit" 
+                    className="post-answer-btn"
+                    disabled={isSubmitting || !answerBody.trim()}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i> Posting...
+                      </>
+                    ) : 'Post Your Answer'}
+                  </button>
+                </div>
               </div>
             </form>
+            
+            {!currentUser && (
+              <div className="login-prompt">
+                <i className="fas fa-info-circle"></i> You need to be logged in to post an answer.
+              </div>
+            )}
           </div>
         </div>
       </div>
