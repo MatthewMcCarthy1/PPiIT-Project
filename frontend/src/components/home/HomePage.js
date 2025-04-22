@@ -4,25 +4,40 @@ import Questions from "../questions/Questions";
 import FullQuestionModal from "../questions/FullQuestionModal";
 import "./HomePage.css";
 
+/**
+ * HomePage Component
+ * Main component for the application's home page
+ * Displays questions, filtering options, and handles user interactions
+ * 
+ * @param {Object} user - Current logged-in user information
+ * @param {Function} setUser - Function to update user state (used for logout)
+ */
 function HomePage({ user, setUser }) {
-  // State to control question modal visibility
+  // ----- STATE MANAGEMENT -----
+  // Modal control states
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  // State to track submission status
   const [submissionStatus, setSubmissionStatus] = useState(null);
-  // State for questions data
+  const [viewingQuestion, setViewingQuestion] = useState(null);
+  
+  // Questions data states
   const [questions, setQuestions] = useState([]);
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [filteredQuestions, setFilteredQuestions] = useState([]);
+  
+  // Filter and view states
+  const [searchQuery, setSearchQuery] = useState(""); // Persisted search query for UI display
+  const [searchInput, setSearchInput] = useState(""); // Current input in search field
   const [activeView, setActiveView] = useState("home"); // 'home', 'myquestions', 'bookmarks'
   const [popularTags, setPopularTags] = useState([]);
   const [selectedTag, setSelectedTag] = useState(null);
   const [sortOption, setSortOption] = useState("newest");
-  const [viewingQuestion, setViewingQuestion] = useState(null);
 
-  // Function to fetch questions from the backend
+  // ----- DATA FETCHING -----
+  /**
+   * Fetches questions from the backend API
+   * Updates questions state and extracts popular tags
+   */
   const fetchQuestions = async () => {
     setIsLoading(true);
     setError(null);
@@ -78,7 +93,12 @@ function HomePage({ user, setUser }) {
     fetchQuestions();
   }, []);
 
-  // Effect to filter and sort questions based on search, tags, and view
+  // ----- FILTERING AND SORTING -----
+  /**
+   * Effect to filter and sort questions based on user-selected criteria
+   * Applies filters for: search text, tags, view type (all/my questions/bookmarks)
+   * Sorts by: newest, oldest, or popularity (answer count)
+   */
   useEffect(() => {
     let result = [...questions];
     
@@ -141,19 +161,29 @@ function HomePage({ user, setUser }) {
     setFilteredQuestions(result);
   }, [questions, searchInput, selectedTag, activeView, sortOption, user.id]);
 
-  // Function to handle user logout
+  // ----- USER ACTIONS -----
+  /**
+   * Handles user logout
+   * Clears user state and removes user data from localStorage
+   */
   const handleLogout = () => {
     setUser(null); // Clear the user state to log out
     localStorage.removeItem("user");
   };
 
-  // Function to handle home navigation
+  /**
+   * Scrolls to the top of the page when "Home" is clicked
+   * Could be expanded with routing in the future
+   */
   const goToHome = () => {
     // For now just refreshes the page, could be expanded with routing later
     window.scrollTo(0, 0);
   };
 
-  // Toggle question modal
+  /**
+   * Toggles the question creation modal visibility
+   * Resets submission status when opening modal
+   */
   const toggleQuestionModal = () => {
     setShowQuestionModal(!showQuestionModal);
     // Clear any previous submission status when opening/closing modal
@@ -162,7 +192,12 @@ function HomePage({ user, setUser }) {
     }
   };
 
-  // Handle question submission from modal
+  /**
+   * Handles question submission from the modal
+   * Sends data to the backend and shows success/error feedback
+   * 
+   * @param {Object} questionData - The question data to be submitted
+   */
   const handleQuestionSubmit = async (questionData) => {
     try {
       // Get the current hostname from the window location
@@ -209,14 +244,22 @@ function HomePage({ user, setUser }) {
     }
   };
 
-  // Function to handle question deletion
+  /**
+   * Updates local state after a question deletion
+   * Removes the deleted question from the questions list
+   * 
+   * @param {number} questionId - The ID of the deleted question
+   */
   const handleQuestionDeleted = (questionId) => {
     // Update the questions list by filtering out the deleted question
     setQuestions(prevQuestions => prevQuestions.filter(q => parseInt(q.id) !== parseInt(questionId)));
   };
 
   /**
-   * Function to handle question updates
+   * Updates local state after a question is updated
+   * Updates both the questions list and the currently viewed question
+   * 
+   * @param {Object} updatedQuestion - The updated question data
    */
   const handleQuestionUpdated = (updatedQuestion) => {
     // Update the questions list with the updated question
@@ -230,7 +273,12 @@ function HomePage({ user, setUser }) {
     setViewingQuestion(updatedQuestion);
   };
 
-  // Function to handle viewing a full question
+  /**
+   * Handles opening the full question view modal
+   * Increments view count locally for immediate UI feedback
+   * 
+   * @param {Object} question - The question to be viewed
+   */
   const handleQuestionView = (question) => {
     // Add local view count increment for immediate UI feedback
     // This will be properly updated from the server on the next data refresh
@@ -238,24 +286,39 @@ function HomePage({ user, setUser }) {
     setViewingQuestion(question);
   };
   
-  // Function to close the full question view
+  /**
+   * Closes the full question view modal
+   */
   const closeFullQuestion = () => {
     setViewingQuestion(null);
   };
 
-  // Search handler
+  // ----- SEARCH AND FILTER HANDLERS -----
+  /**
+   * Updates search input state as user types
+   * 
+   * @param {Event} e - The input change event
+   */
   const handleSearchInput = (e) => {
     setSearchInput(e.target.value);
   };
 
-  // Handle pressing Enter to set the official search query (for displaying "Searching for: X")
+  /**
+   * Sets the search query when user presses Enter
+   * Used for displaying "Searching for: X" message
+   * 
+   * @param {Event} e - The key press event
+   */
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
       setSearchQuery(e.target.value);
     }
   };
 
-  // Function to clear only the search input
+  /**
+   * Clears the search input and query
+   * Called when user clicks the clear button (X) in the search field
+   */
   const clearSearchInput = () => {
     setSearchInput("");
     setSearchQuery("");
@@ -265,7 +328,11 @@ function HomePage({ user, setUser }) {
     }
   };
 
-  // Tag selection handler
+  /**
+   * Toggles tag selection for filtering questions
+   * 
+   * @param {string} tag - The tag to select or deselect
+   */
   const handleTagSelect = (tag) => {
     if (selectedTag === tag) {
       setSelectedTag(null); // Deselect if already selected
@@ -274,17 +341,27 @@ function HomePage({ user, setUser }) {
     }
   };
 
-  // View selection handler
+  /**
+   * Switches between different question views (all, my questions, bookmarks)
+   * 
+   * @param {string} view - The view to display ('home', 'myquestions', 'bookmarks')
+   */
   const handleViewSelect = (view) => {
     setActiveView(view);
   };
 
-  // Sort option handler
+  /**
+   * Changes the sort order of questions
+   * 
+   * @param {Event} e - The select change event
+   */
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
   };
 
-  // Reset all filters
+  /**
+   * Resets all active filters (search query and selected tag)
+   */
   const clearFilters = () => {
     setSearchQuery("");
     setSearchInput("");
@@ -297,8 +374,11 @@ function HomePage({ user, setUser }) {
 
   return (
     <div className="home-page">
+      {/* ----- HEADER BANNER ----- */}
       <div className="banner">
         <div className="website-name" onClick={goToHome}>UniStack</div>
+        
+        {/* Search bar with conditional clear button */}
         <div className="search-bar-container">
           <input
             type="text"
@@ -308,6 +388,7 @@ function HomePage({ user, setUser }) {
             onKeyDown={handleSearchKeyPress}
             value={searchInput}
           />
+          {/* Clear button only appears when there is text in the search input */}
           {searchInput && (
             <i 
               className="fas fa-times clear-search-icon" 
@@ -315,6 +396,7 @@ function HomePage({ user, setUser }) {
             ></i>
           )}
         </div>
+        
         <div className="banner-buttons">
           <span className="welcome-message">
             <i className="fas fa-user-circle"></i> Welcome, {user.email}!
@@ -328,14 +410,18 @@ function HomePage({ user, setUser }) {
         </div>
       </div>
 
+      {/* ----- MAIN CONTENT AREA ----- */}
       <div className="content-container">
+        {/* Welcome banner */}
         <div className="welcome-banner">
           <h1>Welcome to UniStack</h1>
           <p>A community-driven Q&A platform for ATU students to ask questions, share knowledge, and learn together.</p>
         </div>
         
         <div className="main-content">
+          {/* ----- SIDEBAR ----- */}
           <div className="sidebar">
+            {/* Navigation section */}
             <div className="sidebar-section">
               <h3><i className="fas fa-star"></i> Navigation</h3>
               <ul className="sidebar-menu">
@@ -360,6 +446,7 @@ function HomePage({ user, setUser }) {
               </ul>
             </div>
             
+            {/* Tags section */}
             <div className="sidebar-section">
               <h3><i className="fas fa-tags"></i> Popular Tags</h3>
               <div className="tag-cloud">
@@ -385,7 +472,9 @@ function HomePage({ user, setUser }) {
             </div>
           </div>
           
+          {/* ----- QUESTIONS LIST ----- */}
           <div className="questions-section">
+            {/* Questions actions bar: sorting, filtering, refresh */}
             <div className="questions-actions">
               <div className="questions-filter">
                 <select 
@@ -409,7 +498,7 @@ function HomePage({ user, setUser }) {
               </button>
             </div>
             
-            {/* Pass filtered questions and additional props */}
+            {/* Filtered questions list component */}
             <Questions 
               questions={filteredQuestions} 
               allQuestionsCount={questions.length}
@@ -426,7 +515,8 @@ function HomePage({ user, setUser }) {
         </div>
       </div>
 
-      {/* Question Modal Component */}
+      {/* ----- MODALS ----- */}
+      {/* Question creation modal */}
       <QuestionModal 
         isOpen={showQuestionModal} 
         onClose={toggleQuestionModal} 

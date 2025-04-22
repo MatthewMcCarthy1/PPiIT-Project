@@ -1,3 +1,4 @@
+/* ----- GENERAL STYLES ----- */
 body {
   margin: 0;
   padding: 0;
@@ -11,7 +12,7 @@ body {
   flex-direction: column;
 }
 
-/* Banner styles */
+/* ----- BANNER STYLES ----- */
 .banner {
   position: sticky;
   top: 0;
@@ -46,6 +47,7 @@ body {
   transform: scale(1.05);
 }
 
+/* Search bar container and elements */
 .search-bar-container {
   position: relative;
   display: flex;
@@ -57,7 +59,7 @@ body {
 
 .search-bar {
   width: 100%;
-  padding: 10px 40px 10px 15px;
+  padding: 10px 40px 10px 15px; /* Extra padding on right for the clear button */
   border: none;
   border-radius: 5px;
   font-size: 16px;
@@ -71,18 +73,18 @@ body {
   width: 100%;
 }
 
+/* Clear search button that appears when text is entered */
 .clear-search-icon {
   position: absolute;
   right: 10px;
   color: #888;
   cursor: pointer;
-  
   transition: color 0.2s ease;
-  padding-bottom: 13px;
+  padding-bottom: 13px; /* Align vertically with text */
 }
 
 .clear-search-icon:hover {
-  color: #ff4b2b;
+  color: #ff4b2b; /* Primary theme color on hover */
 }
 
 .banner-buttons {
@@ -92,6 +94,7 @@ body {
   flex: 0 0 auto;
 }
 
+/* ----- BUTTON STYLES ----- */
 .ask-question-button,
 .logout-button,
 .refresh-button {
@@ -142,7 +145,7 @@ body {
   margin-right: 5px;
 }
 
-/* Content container styles */
+/* ----- CONTENT CONTAINER STYLES ----- */
 .content-container {
   flex: 1;
   padding: 20px;
@@ -151,7 +154,7 @@ body {
   width: 100%;
 }
 
-/* Welcome banner styles */
+/* ----- WELCOME BANNER STYLES ----- */
 .welcome-banner {
   background: linear-gradient(135deg, #ff6b6b 0%, #ff4b2b 100%);
   border-radius: 12px;
@@ -176,13 +179,13 @@ body {
   line-height: 1.6;
 }
 
-/* Main content styles */
+/* ----- MAIN CONTENT STYLES ----- */
 .main-content {
   display: flex;
   gap: 30px;
 }
 
-/* Sidebar styles */
+/* ----- SIDEBAR STYLES ----- */
 .sidebar {
   flex: 0 0 240px;
 }
@@ -245,6 +248,7 @@ body {
   background-color: #f4f4f8;
 }
 
+/* ----- TAG STYLES ----- */
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
@@ -310,7 +314,7 @@ body {
   font-size: 13px;
 }
 
-/* Questions section styles */
+/* ----- QUESTIONS SECTION STYLES ----- */
 .questions-section {
   flex: 1;
 }
@@ -346,61 +350,4 @@ body {
   background-color: #f0f0f0;
 }
 
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .main-content {
-    flex-direction: column;
-  }
-  
-  .sidebar {
-    flex: 0 0 auto;
-  }
-  
-  .search-bar-container {
-    position: relative;
-    left: 0;
-    top: 0;
-    transform: none;
-    width: auto;
-    flex: 1;
-    margin: 0 20px;
-  }
-  
-  .banner {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 15px;
-  }
-  
-  .website-name {
-    flex: 0 0 100%;
-    margin-bottom: 10px;
-  }
-  
-  .banner-buttons {
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .welcome-message {
-    display: none;
-  }
-}
 
-@media (max-width: 600px) {
-  .content-container {
-    padding: 10px;
-  }
-  
-  .welcome-banner {
-    padding: 20px;
-  }
-  
-  .welcome-banner h1 {
-    font-size: 24px;
-  }
-  
-  .welcome-banner p {
-    font-size: 16px;
-  }
-}
