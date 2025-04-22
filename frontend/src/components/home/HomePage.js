@@ -120,7 +120,22 @@ function HomePage({ user, setUser }) {
     } else if (sortOption === "newest") {
       result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } else if (sortOption === "popular") {
-      // To be implemented
+      // Sort by answer count (highest first), then by views (highest first) as a tiebreaker
+      result.sort((a, b) => {
+        // Convert to numbers and handle null/undefined values
+        const aAnswers = parseInt(a.answer_count) || 0;
+        const bAnswers = parseInt(b.answer_count) || 0;
+        
+        // First compare by answer count
+        if (aAnswers !== bAnswers) {
+          return bAnswers - aAnswers; // Descending order
+        }
+        
+        // If answer counts are equal, compare by views as secondary criterion
+        const aViews = parseInt(a.views) || 0;
+        const bViews = parseInt(b.views) || 0;
+        return bViews - aViews; // Descending order
+      });
     }
     
     setFilteredQuestions(result);
@@ -349,7 +364,7 @@ function HomePage({ user, setUser }) {
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
-                  <option value="popular">Most Popular</option>
+                  <option value="popular">Most Active (by answers)</option>
                 </select>
                 
                 {searchQuery && (
