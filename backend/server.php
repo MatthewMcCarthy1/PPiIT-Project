@@ -257,7 +257,14 @@ function fetchEntityWithUser($conn, $table, $id) {
  * @return void Sends JSON response directly
  */
 function login($conn, $data) {
-    $email = $data->email;
+    // Validate required parameters
+    if (!isset($data->email) || !isset($data->password) || 
+        empty(trim($data->email)) || empty(trim($data->password))) {
+        sendJsonResponse(["success" => false, "message" => "Email and password are required"]);
+        return;
+    }
+
+    $email = trim($data->email);
     $password = $data->password;
 
     // Validate email format
@@ -278,10 +285,10 @@ function login($conn, $data) {
         if (password_verify($password, $user['password'])) {
             sendJsonResponse(["success" => true, "user" => ["id" => $user['id'], "email" => $user['email']]]);
         } else {
-            sendJsonResponse(["success" => false, "message" => "Invalid password"]);
+            sendJsonResponse(["success" => false, "message" => "Incorrect password"]);
         }
     } else {
-        sendJsonResponse(["success" => false, "message" => "User not found"]);
+        sendJsonResponse(["success" => false, "message" => "No account found with this email"]);
     }
 }
 
@@ -296,7 +303,14 @@ function login($conn, $data) {
  * @return void Sends JSON response directly
  */
 function register($conn, $data) {
-    $email = $data->email;
+    // Validate required parameters
+    if (!isset($data->email) || !isset($data->password) || 
+        empty(trim($data->email)) || empty(trim($data->password))) {
+        sendJsonResponse(["success" => false, "message" => "Email and password are required"]);
+        return;
+    }
+
+    $email = trim($data->email);
     $password = $data->password;
 
     // Validate email format
@@ -317,6 +331,17 @@ function register($conn, $data) {
         return;
     }
 
+    // Check if email is already registered
+    $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $checkStmt->bind_param("s", $email);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        sendJsonResponse(["success" => false, "message" => "This email is already registered"]);
+        return;
+    }
+
     // Hash the password
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
@@ -332,7 +357,11 @@ function register($conn, $data) {
             "user" => ["id" => $user_id, "email" => $email]
         ]);
     } else {
-        sendJsonResponse(["success" => false, "message" => "Error registering user"]);
+        // Provide more detailed error information
+        sendJsonResponse([
+            "success" => false, 
+            "message" => "Registration failed: " . $conn->error
+        ]);
     }
 }
 
