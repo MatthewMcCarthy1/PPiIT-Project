@@ -263,9 +263,30 @@
 
 .answer-meta {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 10px;
   border-top: 1px solid #edf2f7;
+}
+
+/* Answer delete button */
+.answer-delete-btn {
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.answer-delete-btn:hover {
+  color: #e53e3e;
+  background-color: #fff5f5;
 }
 
 .answer-author {
