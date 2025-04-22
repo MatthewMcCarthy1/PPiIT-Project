@@ -1,0 +1,90 @@
+.comments-section {
+  margin-top: 8px;
+  border-top: 1px solid #edf2f7;
+  padding-top: 8px;
+  font-size: 14px;
+}
+
+.toggle-comments-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #718096;
+  padding: 0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.toggle-comments-btn:hover {
+  color: #4299e1;
+}
+
+.comments-list {
+  margin-bottom: 12px;
+}
+
+.comments-loading, 
+.comments-error, 
+.no-comments {
+  color: #718096;
+  font-size: 12px;
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.comments-error {
+  color: #e53e3e;
+}
+
+.add-comment-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.add-comment-form input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.add-comment-form input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.15);
+}
+
+.add-comment-form button {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.add-comment-form button:hover:not(:disabled) {
+  background-color: #3182ce;
+}
+
+.add-comment-form button:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.login-to-comment {
+  color: #718096;
+  font-size: 12px;
+  margin-top: 10px;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
