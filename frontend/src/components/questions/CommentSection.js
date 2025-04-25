@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Comment from './Comment';
 import './questions-css/CommentSection.css';
 
@@ -31,20 +31,44 @@ function CommentSection({ answerId, currentUser }) {
   // Controls whether the comments list is expanded/visible or collapsed/hidden
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   
+  // Reference to store the polling interval
+  const pollingIntervalRef = useRef(null);
+  
+  // Track the last comment count to avoid unnecessary re-renders
+  const lastCommentCountRef = useRef(0);
+  
   /**
    * Fetch comments when component mounts or when answerId changes
    * This ensures comments are always up-to-date for the current answer
    */
   useEffect(() => {
     fetchComments();
+    
+    // Start polling for new comments every 5 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      if (!isSubmitting) { // Don't poll while submitting to avoid race conditions
+        fetchComments(true); // The 'silent' parameter prevents showing loading indicators
+      }
+    }, 5000);
+    
+    // Clean up interval when component unmounts or answerId changes
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [answerId]);
   
   /**
    * Fetches comments for the current answer from the server
    * Updates state with the retrieved comments or any error messages
+   * 
+   * @param {boolean} silent - If true, don't show loading indicators (for background polling)
    */
-  const fetchComments = async () => {
-    setIsLoading(true);
+  const fetchComments = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
     
     try {
@@ -59,14 +83,24 @@ function CommentSection({ answerId, currentUser }) {
       const data = await response.json();
       
       if (data.success) {
-        setComments(data.comments || []);
+        // Only update state if the comment count has changed to avoid unnecessary re-renders
+        if (!silent || data.comments.length !== lastCommentCountRef.current) {
+          setComments(data.comments || []);
+          lastCommentCountRef.current = data.comments.length;
+        }
       } else {
-        setError(data.message || 'Failed to load comments');
+        if (!silent) {
+          setError(data.message || 'Failed to load comments');
+        }
       }
     } catch (error) {
-      setError('Network error. Please try again later.');
+      if (!silent) {
+        setError('Network error. Please try again later.');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
   
@@ -132,6 +166,11 @@ function CommentSection({ answerId, currentUser }) {
    * @param {number} commentId - ID of the comment to delete
    */
   const handleDeleteComment = async (commentId) => {
+    if (!currentUser) {
+      alert('Please log in to delete a comment');
+      return;
+    }
+    
     try {
       const hostname = window.location.hostname;
       const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
@@ -164,9 +203,24 @@ function CommentSection({ answerId, currentUser }) {
   
   /**
    * Toggles the visibility of the comments section
+   * Also adjusts polling frequency - poll more frequently when expanded
    */
   const toggleComments = () => {
-    setCommentsExpanded(!commentsExpanded);
+    const newExpandedState = !commentsExpanded;
+    setCommentsExpanded(newExpandedState);
+    
+    // Clear existing polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    
+    // Set new polling interval - poll more frequently when comments are expanded
+    const pollingTime = newExpandedState ? 2000 : 5000;
+    pollingIntervalRef.current = setInterval(() => {
+      if (!isSubmitting) {
+        fetchComments(true);
+      }
+    }, pollingTime);
   };
   
   // Content for the toggle button
