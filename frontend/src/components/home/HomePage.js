@@ -3,6 +3,7 @@ import QuestionModal from "../questions/QuestionModal";
 import Questions from "../questions/Questions";
 import FullQuestionModal from "../questions/FullQuestionModal";
 import "./HomePage.css";
+import { API_BASE_URL } from "../../config"; // Import the API base URL from config
 
 /**
  * HomePage Component
@@ -42,9 +43,7 @@ function HomePage({ user, setUser }) {
     setIsLoading(true);
     setError(null);
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(`${backendUrl}?action=getQuestions`, {
         method: 'GET',
@@ -200,9 +199,7 @@ function HomePage({ user, setUser }) {
    */
   const handleQuestionSubmit = async (questionData) => {
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',

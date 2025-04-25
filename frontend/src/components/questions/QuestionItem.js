@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./questions-css/QuestionItem.css";
 import DeleteConfirmModal from "./DeleteConfirmModal";
+import { API_BASE_URL } from "../../config"; // Importing API base URL from config
 
 /**
  * QuestionItem Component
@@ -128,9 +129,7 @@ function QuestionItem({ question, currentUser, onQuestionDeleted, onQuestionView
     setIsDeleting(true);
     
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',

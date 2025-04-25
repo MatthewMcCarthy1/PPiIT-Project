@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import '../login/Login.css';
+import { API_BASE_URL } from '../../../config'; // Importing API base URL from config
 
 /**
  * Login Component
@@ -25,10 +26,7 @@ function Login({ setUser }) {
     e.preventDefault();
     setError(''); // Clear any previous errors
     try {
-      // Dynamically construct backend URL based on current hostname
-      // This allows the frontend to work in different environments
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       // Send login request to backend
       const response = await fetch(backendUrl, {

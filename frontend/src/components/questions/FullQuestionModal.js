@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./questions-css/FullQuestionModal.css";
 import CommentSection from './CommentSection';
+import { API_BASE_URL } from '../../config'; // Importing API base URL from config
 
 /**
  * ============================================================================
@@ -95,9 +96,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
    */
   const incrementViewCount = async () => {
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       await fetch(backendUrl, {
         method: 'POST',
@@ -126,9 +125,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setAnswerError(null);
     
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(`${backendUrl}?action=getAnswers&questionId=${question.id}`, {
         method: 'GET',
@@ -178,9 +175,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setSubmissionStatus(null);
     
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -277,8 +272,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setIsDeleting(true);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -344,8 +338,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setIsUpdating(true);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -409,8 +402,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setIsAccepting(true);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -514,8 +506,7 @@ function FullQuestionModal({ isOpen, onClose, question, currentUser, onQuestionU
     setIsUpdatingQuestion(true);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',

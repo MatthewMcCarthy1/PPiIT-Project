@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Comment from './Comment';
 import './questions-css/CommentSection.css';
+import { API_BASE_URL } from '../../config'; // Importing API base URL from config
 
 /**
  * Comment Section Component
@@ -72,8 +73,7 @@ function CommentSection({ answerId, currentUser }) {
     setError(null);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(`${backendUrl}?action=getComments&answerId=${answerId}`, {
         method: 'GET',
@@ -122,8 +122,7 @@ function CommentSection({ answerId, currentUser }) {
     setIsSubmitting(true);
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -172,8 +171,7 @@ function CommentSection({ answerId, currentUser }) {
     }
     
     try {
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
       
       const response = await fetch(backendUrl, {
         method: 'POST',

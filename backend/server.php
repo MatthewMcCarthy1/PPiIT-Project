@@ -19,21 +19,28 @@ function sendJsonResponse($data) {
     return;
 }
 
-// Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: *");
+// Get the origin from the request headers
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Define allowed origins (add more as needed)
+$allowed_origins = [
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'http://127.0.0.1:3000'
+];
+
+// Check if the origin is allowed
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
     header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
     header("Access-Control-Allow-Credentials: true");
-    exit(0);
 }
 
-// Add CORS headers to all responses
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Credentials: true");
-header("Content-Type: application/json; charset=utf-8");
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
 
 try {
     // Connect to the MySQL database

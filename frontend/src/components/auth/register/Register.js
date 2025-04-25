@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "../register/Register.css";
+import { API_BASE_URL } from "../../../config"; // Importing API base URL from config
 
 /**
  * Register Component
@@ -42,9 +43,7 @@ function Register({ setUser }) {
       return;
     }
     try {
-      // Get the current hostname from the window location
-      const hostname = window.location.hostname;
-      const backendUrl = `https://${hostname.replace('-3000', '-8000')}/server.php`;
+      const backendUrl = API_BASE_URL;
 
       // Send a POST request to the server for registration
       const response = await fetch(backendUrl, {
